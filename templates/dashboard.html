@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - SecureVision{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-4">
+            <i class="bi bi-shield-lock-fill text-primary"></i>
+            SecureVision Dashboard
+        </h1>
+        <p class="lead">Intelligent Cybersecurity Threat Detection System</p>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Total Scans</h6>
+                <p class="card-title" id="total-scans">0</p>
+                <small class="text-muted">All time</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card threat">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Threats Detected</h6>
+                <p class="card-title text-danger" id="threats-detected">0</p>
+                <small class="text-muted">Requires attention</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card safe">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Safe Results</h6>
+                <p class="card-title text-success" id="safe-results">0</p>
+                <small class="text-muted">No threats found</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card warning">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Detection Rate</h6>
+                <p class="card-title text-warning" id="detection-rate">0%</p>
+                <small class="text-muted">Threat / Total</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scan Type Statistics -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-link-45deg text-primary" style="font-size: 2rem;"></i>
+                <h5 class="card-title mt-2">URL Scans</h5>
+                <p class="display-6" id="url-scans">0</p>
+                <a href="/scan/url" class="btn btn-primary btn-sm">Scan URL</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-envelope text-info" style="font-size: 2rem;"></i>
+                <h5 class="card-title mt-2">Message Scans</h5>
+                <p class="display-6" id="message-scans">0</p>
+                <a href="/scan/message" class="btn btn-info btn-sm">Scan Message</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="bi bi-android2 text-success" style="font-size: 2rem;"></i>
+                <h5 class="card-title mt-2">APK Scans</h5>
+                <p class="display-6" id="apk-scans">0</p>
+                <a href="/scan/apk" class="btn btn-success btn-sm">Scan APK</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row mb-4">
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Safe vs Threat Distribution</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="safeVsThreatChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Threats by Type</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="threatsByTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Scans -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Recent Scans</h5>
+                <a href="/history" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Input</th>
+                                <th>Result</th>
+                                <th>Risk</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-scans-body">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

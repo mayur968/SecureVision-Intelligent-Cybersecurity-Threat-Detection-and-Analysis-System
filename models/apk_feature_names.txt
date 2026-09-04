@@ -1,0 +1,10 @@
+permission_count
+dangerous_permission_count
+activity_count
+service_count
+receiver_count
+provider_count
+component_count
+has_dangerous_permissions
+file_count
+dex_count

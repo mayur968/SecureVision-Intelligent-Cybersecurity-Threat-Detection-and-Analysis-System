@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Scan History - SecureVision{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-clock-history text-primary"></i>
+            Scan History
+        </h2>
+        
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="filter-type" class="form-label">Scan Type</label>
+                        <select class="form-select" id="filter-type">
+                            <option value="">All Types</option>
+                            <option value="URL">URL</option>
+                            <option value="MESSAGE">Message</option>
+                            <option value="APK">APK</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="filter-prediction" class="form-label">Prediction</label>
+                        <select class="form-select" id="filter-prediction">
+                            <option value="">All Results</option>
+                            <option value="SAFE">Safe</option>
+                            <option value="PHISHING">Phishing</option>
+                            <option value="MALICIOUS">Malicious</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="filter-risk" class="form-label">Risk Level</label>
+                        <select class="form-select" id="filter-risk">
+                            <option value="">All Levels</option>
+                            <option value="LOW">Low</option>
+                            <option value="MEDIUM">Medium</option>
+                            <option value="HIGH">High</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- History Table -->
+        <div class="card history-table">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Type</th>
+                                <th>Input</th>
+                                <th>Prediction</th>
+                                <th>Confidence</th>
+                                <th>Risk Level</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body">
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allScans = [];
+
+// Load history
+async function loadHistory() {
+    try {
+        const response = await fetch('/api/history?limit=100');
+        const data = await response.json();
+        
+        if (data.success) {
+            allScans = data.scans;
+            displayHistory(allScans);
+        } else {
+            showError('Failed to load history');
+        }
+    } catch (error) {
+        console.error('Error loading history:', error);
+        showError('Error loading scan history');
+    }
+}
+
+// Display history
+function displayHistory(scans) {
+    const tbody = document.getElementById('history-body');
+    
+    if (scans.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No scan history found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = scans.map(scan => {
+        const date = new Date(scan.created_at).toLocaleString();
+        const predictionClass = scan.prediction === 'SAFE' ? 'success' : 'danger';
+        const riskClass = getRiskClass(scan.risk_level);
+        const confidence = (scan.confidence * 100).toFixed(1) + '%';
+        
+        return `
+            <tr>
+                <td>${date}</td>
+                <td><span class="badge bg-secondary">${scan.scan_type}</span></td>
+                <td><small>${escapeHtml(scan.input_value)}</small></td>
+                <td><span class="badge prediction-${scan.prediction.toLowerCase()}">${scan.prediction}</span></td>
+                <td>${confidence}</td>
+                <td><span class="risk-badge ${riskClass}">${scan.risk_level}</span></td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Filter history
+function filterHistory() {
+    const typeFilter = document.getElementById('filter-type').value;
+    const predictionFilter = document.getElementById('filter-prediction').value;
+    const riskFilter = document.getElementById('filter-risk').value;
+    
+    let filtered = allScans;
+    
+    if (typeFilter) {
+        filtered = filtered.filter(scan => scan.scan_type === typeFilter);
+    }
+    
+    if (predictionFilter) {
+        filtered = filtered.filter(scan => scan.prediction === predictionFilter);
+    }
+    
+    if (riskFilter) {
+        filtered = filtered.filter(scan => scan.risk_level === riskFilter);
+    }
+    
+    displayHistory(filtered);
+}
+
+// Helper functions
+function getRiskClass(riskLevel) {
+    const classes = {
+        'LOW': 'risk-low',
+        'MEDIUM': 'risk-medium',
+        'HIGH': 'risk-high'
+    };
+    return classes[riskLevel] || 'risk-medium';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showError(message) {
+    document.getElementById('history-body').innerHTML = 
+        `<tr><td colspan="6" class="text-center text-danger">${message}</td></tr>`;
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    loadHistory();
+    
+    // Add filter listeners
+    document.getElementById('filter-type').addEventListener('change', filterHistory);
+    document.getElementById('filter-prediction').addEventListener('change', filterHistory);
+    document.getElementById('filter-risk').addEventListener('change', filterHistory);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,185 @@
+================================================================================
+SECUREVISION - QUICK SETUP GUIDE
+Phase 1 (30%) Implementation
+================================================================================
+
+STEP-BY-STEP SETUP INSTRUCTIONS:
+
+1. CREATE VIRTUAL ENVIRONMENT
+   ----------------------------
+   Windows PowerShell:
+   
+   python -m venv venv
+   venv\Scripts\activate
+   
+   You should see (venv) in your command prompt.
+
+2. INSTALL DEPENDENCIES
+   --------------------
+   pip install -r requirements.txt
+   
+   This will install Flask, scikit-learn, pandas, and other dependencies.
+   
+   Note: If androguard fails to install, that's okay - the system will work
+   with basic APK analysis.
+
+3. TRAIN THE MACHINE LEARNING MODELS
+   ----------------------------------
+   Run these commands in order:
+   
+   python training/train_url_model.py
+   python training/train_message_model.py
+   python training/train_apk_model.py
+   
+   Each script will:
+   - Load sample data
+   - Extract features
+   - Train models
+   - Save the best model
+   - Display performance metrics
+   
+   Expected output: Accuracy, Precision, Recall, F1-score for each model
+
+4. START THE APPLICATION
+   ----------------------
+   python app.py
+   
+   You should see:
+   * Running on http://127.0.0.1:5000
+   
+   Open your web browser and navigate to:
+   http://localhost:5000
+
+5. TEST THE APPLICATION
+   ---------------------
+   a) Dashboard: View statistics and charts
+   b) URL Scanner: Test with sample URLs:
+      - Safe: https://www.google.com
+      - Phishing: http://secure-login-verify.com/account
+   
+   c) Message Scanner: Test with sample messages:
+      - Safe: "Hello, how are you doing today?"
+      - Phishing: "URGENT: Your account has been suspended. Verify immediately."
+   
+   d) APK Scanner: Upload any .apk file (or create a dummy .zip and rename to .apk)
+   
+   e) History: View all scan results
+
+6. RUN TESTS (OPTIONAL)
+   ---------------------
+   pytest tests/ -v
+
+================================================================================
+TROUBLESHOOTING:
+================================================================================
+
+PROBLEM: "No module named 'flask'"
+SOLUTION: Make sure virtual environment is activated and dependencies installed
+
+PROBLEM: "Model not found" error
+SOLUTION: Run the training scripts (Step 3)
+
+PROBLEM: "Port 5000 already in use"
+SOLUTION: Either stop other application using port 5000, or change port in app.py
+
+PROBLEM: Androguard installation fails
+SOLUTION: This is optional. System will work with basic APK analysis.
+
+================================================================================
+PROJECT STRUCTURE VERIFICATION:
+================================================================================
+
+After setup, you should have these directories:
+
+SecureVision/
+├── data/            (sample datasets - already included)
+├── models/          (generated after training - should contain .pkl files)
+├── uploads/         (created automatically for APK uploads)
+├── templates/       (HTML files - already included)
+├── static/          (CSS and JS - already included)
+├── preprocessing/   (preprocessing modules - already included)
+├── features/        (feature extraction - already included)
+├── detection/       (detection services - already included)
+├── training/        (training scripts - already included)
+├── explanation/     (explanation engine - already included)
+├── database/        (database models - already included)
+├── utils/           (utilities - already included)
+└── tests/           (unit tests - already included)
+
+Generated files:
+- securevision.db    (SQLite database - created on first run)
+- securevision.log   (log file - created on first run)
+- models/*.pkl       (trained models - created after training)
+
+================================================================================
+USAGE TIPS:
+================================================================================
+
+1. Always activate virtual environment before working:
+   venv\Scripts\activate
+
+2. Train models before first use - they're required for scanning
+
+3. Check securevision.log file for technical error details
+
+4. Use Chrome/Firefox/Edge for best dashboard experience
+
+5. Sample datasets are in data/ folders - you can add more samples
+
+6. Models are saved in models/ - retrain to update with new data
+
+================================================================================
+WHAT'S WORKING IN PHASE 1:
+================================================================================
+
+✓ URL phishing detection with 20 features
+✓ Email/SMS phishing detection with TF-IDF
+✓ APK static analysis (permissions, components)
+✓ Risk scoring (0-100 with LOW/MEDIUM/HIGH)
+✓ Threat explanations
+✓ Security recommendations
+✓ Web dashboard with statistics
+✓ Interactive charts (Chart.js)
+✓ Scan history with filtering
+✓ REST API endpoints
+✓ SQLite database for persistence
+✓ Unit tests for core functionality
+
+================================================================================
+NEXT STEPS (AFTER PHASE 1):
+================================================================================
+
+Phase 2 will include:
+- Larger, real-world datasets
+- Deep learning models
+- Dynamic APK analysis
+- Real-time URL crawling
+- User authentication
+- PDF report generation
+- Advanced explainability (SHAP/LIME)
+- Cloud deployment
+
+================================================================================
+IMPORTANT REMINDERS:
+================================================================================
+
+⚠️ This is Phase 1 (30%) - a foundational implementation
+⚠️ Demo datasets are for development/testing only
+⚠️ NOT for production security use
+⚠️ APK files are NOT executed (static analysis only)
+⚠️ URLs are NOT automatically visited
+⚠️ Results are probabilistic, not absolute
+
+================================================================================
+NEED HELP?
+================================================================================
+
+1. Check README.md for detailed documentation
+2. Review securevision.log for error details
+3. Run tests to verify functionality: pytest tests/ -v
+4. Check if virtual environment is activated
+5. Verify all models are trained
+
+================================================================================
+PROJECT COMPLETE - PHASE 1 (30%) ✅
+================================================================================
