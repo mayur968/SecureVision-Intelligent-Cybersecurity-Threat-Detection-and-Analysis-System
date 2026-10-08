@@ -8,6 +8,10 @@ from config import Config
 from utils.logger import logger
 from database.models import db, ScanHistory
 import os
+import threading
+import time
+import uuid
+from concurrent.futures import ThreadPoolExecutor
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -109,6 +113,88 @@ apk_detector = APKDetector()
 risk_scorer = RiskScorer()
 threat_explainer = ThreatExplainer()
 recommendation_engine = RecommendationEngine()
+
+# Live scan async job store
+_executor = ThreadPoolExecutor(max_workers=4)
+_jobs: dict = {}          # job_id -> {status, result, error, created_at}
+_jobs_lock = threading.Lock()
+
+
+def _run_live_scan_job(job_id: str, url: str) -> None:
+    """Background worker: run live scan and update job store."""
+    try:
+        with _jobs_lock:
+            _jobs[job_id]['status'] = 'running'
+
+        from detection.live_scanner import scan_live
+        live_result = scan_live(url, timeout_ms=30000)
+
+        ml_result = url_detector.predict(url)
+        ml_prediction = ml_result.get('prediction', 'SAFE')
+        ml_confidence = ml_result.get('confidence', 0.5)
+
+        live_verdict = live_result.get('verdict', 'COULD_NOT_VERIFY')
+        live_score = live_result.get('live_score', 0)
+
+        if live_verdict == 'COULD_NOT_VERIFY':
+            ml_phishing_prob = ml_confidence if ml_prediction == 'PHISHING' else (1 - ml_confidence)
+            combined_score = ml_phishing_prob * 100
+        else:
+            ml_phishing_prob = ml_confidence if ml_prediction == 'PHISHING' else (1 - ml_confidence)
+            combined_score = 0.6 * live_score + 0.4 * (ml_phishing_prob * 100)
+
+        final_prediction = 'PHISHING' if combined_score >= 50 else 'SAFE'
+        combined_confidence = combined_score / 100.0
+
+        risk_result = risk_scorer.calculate_risk_score(
+            final_prediction, combined_confidence, 'URL_LIVE', live_result.get('evidence', [])
+        )
+        explanation = threat_explainer.explain(
+            final_prediction, combined_confidence, 'URL_LIVE', live_result.get('evidence', [])
+        )
+        recommendations = recommendation_engine.get_recommendations(
+            final_prediction, 'URL_LIVE', risk_result['risk_level'], live_result.get('evidence', [])
+        )
+
+        with app.app_context():
+            ScanHistory.save_scan(
+                scan_type='URL_LIVE',
+                input_value=url,
+                prediction=final_prediction,
+                confidence=combined_confidence,
+                risk_level=risk_result['risk_level'],
+                explanation=explanation,
+                recommendation='\n'.join(recommendations)
+            )
+
+        result = {
+            'success': True,
+            'prediction': final_prediction,
+            'confidence': round(combined_confidence, 4),
+            'risk_score': risk_result['risk_score'],
+            'risk_level': risk_result['risk_level'],
+            'explanation': explanation,
+            'recommendations': recommendations,
+            'verdict': live_verdict,
+            'live_score': live_score,
+            'evidence': live_result.get('evidence', []),
+            'redirect_chain': live_result.get('redirect_chain', []),
+        }
+
+        with _jobs_lock:
+            _jobs[job_id]['status'] = 'done'
+            _jobs[job_id]['result'] = result
+            # Evict old jobs
+            cutoff = time.time() - 600
+            expired = [k for k, v in _jobs.items() if v['created_at'] < cutoff]
+            for k in expired:
+                del _jobs[k]
+
+    except Exception as exc:
+        logger.error(f'Live scan job {job_id} failed: {exc}')
+        with _jobs_lock:
+            _jobs[job_id]['status'] = 'failed'
+            _jobs[job_id]['error'] = str(exc)
 
 
 @app.route('/api/scan/url', methods=['POST'])
@@ -385,6 +471,60 @@ def api_scan_apk():
             'success': False,
             'error': 'Internal server error'
         }), 500
+
+
+@app.route('/api/scan/url/live', methods=['POST'])
+def api_scan_url_live():
+    """Submit a URL for live (headless-browser) scanning; returns a job ID immediately."""
+    try:
+        data = request.get_json()
+        if not data or 'url' not in data:
+            return jsonify({'success': False, 'error': 'URL parameter is required'}), 400
+
+        url = data['url']
+        is_valid, error_msg = validate_url(url)
+        if not is_valid:
+            return jsonify({'success': False, 'error': error_msg}), 400
+
+        job_id = str(uuid.uuid4())
+        with _jobs_lock:
+            _jobs[job_id] = {
+                'status': 'queued',
+                'result': None,
+                'error': None,
+                'created_at': time.time(),
+            }
+
+        _executor.submit(_run_live_scan_job, job_id, url)
+
+        return jsonify({'success': True, 'job_id': job_id, 'status': 'queued'}), 202
+
+    except Exception as exc:
+        logger.error(f'Error submitting live scan: {exc}')
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
+
+@app.route('/api/scan/url/live/<job_id>', methods=['GET'])
+def api_get_live_scan_job(job_id: str):
+    """Poll the status/result of a live scan job."""
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        # Evict expired jobs on each poll
+        cutoff = time.time() - 600
+        expired = [k for k, v in _jobs.items() if v['created_at'] < cutoff]
+        for k in expired:
+            del _jobs[k]
+
+    if job is None:
+        return jsonify({'success': False, 'error': 'Job not found'}), 404
+
+    status = job['status']
+    if status in ('queued', 'running'):
+        return jsonify({'success': True, 'status': status}), 200
+    if status == 'failed':
+        return jsonify({'success': False, 'status': 'failed', 'error': job.get('error', 'Unknown error')}), 200
+    # done
+    return jsonify({'success': True, 'status': 'done', **job['result']}), 200
 
 
 @app.route('/api/history', methods=['GET'])
