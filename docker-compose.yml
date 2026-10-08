@@ -1,0 +1,106 @@
+version: "3.9"
+
+services:
+  # ── Python ML microservice ─────────────────────────────────────────────────
+  ml-service:
+    build:
+      context: .          # full repo root so all detection/* modules are available
+      dockerfile: ml-service/Dockerfile
+    container_name: sv_ml
+    restart: unless-stopped
+    environment:
+      ML_PORT: "5000"
+      ML_ALLOWED_ORIGIN: "http://localhost:4000"
+      SECRET_KEY: "${SECRET_KEY:-change-me-in-production}"
+    volumes:
+      - ./models:/app/models:ro          # pre-trained .pkl files (read-only)
+      - ./securevision.db:/app/securevision.db  # persist SQLite across restarts
+      - sv_uploads:/app/uploads          # temp APK uploads (cleaned after scan)
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - sv_net
+
+  # ── Node.js / Express API gateway ─────────────────────────────────────────
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: sv_server
+    restart: unless-stopped
+    environment:
+      PORT: "4000"
+      ML_SERVICE_URL: "http://ml-service:5000"
+      CLIENT_ORIGIN: "http://localhost:5173"
+      LOG_LEVEL: "info"
+    ports:
+      - "4000:4000"
+    depends_on:
+      ml-service:
+        condition: service_healthy
+    networks:
+      - sv_net
+
+  # ── React / Vite frontend (production build served by Node preview) ────────
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: sv_client
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    depends_on:
+      - server
+    networks:
+      - sv_net
+
+  # ── Live URL Scanner (isolated Playwright service) ─────────────────────────
+  # NOTE: utils/ is copied flat from repo root into /app/utils/ inside the container
+  live-scanner:
+    build:
+      context: .          # repo root so detection/ and utils/ are accessible
+      dockerfile: live-scanner/Dockerfile
+    container_name: sv_live_scanner
+    restart: unless-stopped
+    environment:
+      LIVE_SCAN_TIMEOUT_MS: "15000"
+      LIVE_SCAN_MAX_WORKERS: "2"
+      LIVE_SCAN_ENABLED: "true"
+      LIVE_SCANNER_ORIGIN: "http://ml-service:5000"
+      LLM_VERDICT_ENABLED: "false"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: '1.0'
+    tmpfs:
+      - /tmp
+      - /home/scanner
+    networks:
+      - sv_net
+    # NOTE: no database volume mount — this service is stateless
+    # SECURITY: add egress firewall rules blocking 10.0.0.0/8, 172.16.0.0/12,
+    #           192.168.0.0/16 at the network level for defense in depth.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    ports:
+      - "5001:5001"
+
+volumes:
+  sv_uploads:
+
+networks:
+  sv_net:
+    driver: bridge
