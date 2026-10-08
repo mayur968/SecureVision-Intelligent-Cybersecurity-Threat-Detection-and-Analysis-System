@@ -1,491 +1,266 @@
-# SecureVision - Intelligent Cybersecurity Threat Detection System
+# SecureVision v2
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
-![Flask](https://img.shields.io/badge/Flask-3.0.0-green.svg)
-![License](https://img.shields.io/badge/License-MIT-yellow.svg)
-![Phase](https://img.shields.io/badge/Phase-1%20(30%25)-orange.svg)
+**Intelligent Cybersecurity Threat Detection System**
 
-**SecureVision** is a modular cybersecurity platform designed to detect and analyze various types of threats including phishing URLs, malicious messages, and Android APK malware. This repository contains the Phase 1 (30%) implementation, establishing a solid foundation for future enhancements.
-
-## 🎯 Project Overview
-
-SecureVision is a final-year engineering project that demonstrates practical application of machine learning in cybersecurity. The system provides:
-
-- **URL Phishing Detection**: Analyzes URLs for phishing characteristics
-- **Email/SMS Phishing Detection**: Identifies suspicious messages using NLP
-- **APK Malware Detection**: Static analysis of Android applications
-- **Threat Explanation**: Human-readable explanations for detections
-- **Risk Scoring**: 0-100 risk scores with LOW/MEDIUM/HIGH classification
-- **Security Recommendations**: Actionable guidance for users
-- **Web Dashboard**: Interactive interface with visualizations
-
-## ⚠️ Important Notes
-
-### Current Implementation (Phase 1 - 30%)
-
-This is the **foundational phase** of SecureVision. The system is functional and demonstrates core concepts, but should **NOT** be used as a production security tool without significant enhancements.
-
-### Limitations
-
-- **Demo Datasets**: Models are trained on small sample datasets (50-100 samples) for development purposes only
-- **Static Analysis Only**: APK analysis does not execute applications
-- **No Real-time URL Crawling**: URLs are analyzed by pattern matching, not by visiting them
-- **Basic ML Models**: Uses traditional ML (Logistic Regression, Random Forest) rather than deep learning
-- **No Authentication**: Single-user system without access control
-- **Local Deployment**: Not configured for production cloud deployment
-
-### Security Disclaimers
-
-- ⚠️ **APK files are NOT executed** - analysis is purely static
-- ⚠️ **URLs are NOT automatically visited** - analysis is pattern-based
-- ⚠️ **Results are probabilistic** - not 100% accurate
-- ⚠️ **Use responsible language** - predictions are "potentially malicious" not "definitely malicious"
-
-## 🏗️ Architecture
+Three-tier monorepo: Python ML microservice · Node.js/Express API gateway · React SPA
 
 ```
-SecureVision
-├── Web Dashboard (Flask)
-│   ├── URL Scanner
-│   ├── Message Scanner
-│   └── APK Scanner
-│
-├── Detection Modules
-│   ├── URL Detector (20 features + ML)
-│   ├── Message Detector (TF-IDF + ML)
-│   └── APK Detector (Static analysis + ML)
-│
-├── Analysis Engine
-│   ├── Risk Scorer
-│   ├── Threat Explainer
-│   └── Recommendation Engine
-│
-└── Database (SQLite)
-    └── Scan History
+[React + TypeScript]  ←→  [Node.js/Express]  ←→  [Python Flask ML]
+     :5173                     :4000                    :5000
 ```
-
-## 📁 Project Structure
-
-```
-SecureVision/
-│
-├── app.py                      # Flask application
-├── config.py                   # Configuration settings
-├── requirements.txt            # Python dependencies
-├── README.md                   # This file
-│
-├── data/                       # Sample datasets
-│   ├── urls/
-│   │   └── sample_urls.csv
-│   ├── messages/
-│   │   └── sample_messages.csv
-│   └── apk/
-│       └── sample_apk_features.csv
-│
-├── models/                     # Trained ML models (generated)
-│   ├── url_model.pkl
-│   ├── message_model.pkl
-│   └── apk_model.pkl
-│
-├── preprocessing/              # Data preprocessing
-│   ├── url_preprocessing.py
-│   ├── text_preprocessing.py
-│   └── apk_preprocessing.py
-│
-├── features/                   # Feature extraction
-│   ├── url_features.py
-│   ├── text_features.py
-│   └── apk_features.py
-│
-├── detection/                  # Detection services
-│   ├── url_detector.py
-│   ├── message_detector.py
-│   └── apk_detector.py
-│
-├── training/                   # Model training scripts
-│   ├── train_url_model.py
-│   ├── train_message_model.py
-│   └── train_apk_model.py
-│
-├── explanation/                # Threat explanation
-│   ├── risk_score.py
-│   ├── threat_explainer.py
-│   └── recommendations.py
-│
-├── database/                   # Database models
-│   └── models.py
-│
-├── utils/                      # Utility functions
-│   ├── logger.py
-│   ├── validators.py
-│   └── file_security.py
-│
-├── templates/                  # HTML templates
-│   ├── base.html
-│   ├── dashboard.html
-│   ├── url_scanner.html
-│   ├── message_scanner.html
-│   ├── apk_scanner.html
-│   └── history.html
-│
-├── static/                     # Static assets
-│   ├── css/
-│   │   └── style.css
-│   └── js/
-│       ├── dashboard.js
-│       └── scanner.js
-│
-└── tests/                      # Unit tests
-    ├── test_url_detector.py
-    ├── test_message_detector.py
-    └── test_apk_detector.py
-```
-
-## 🚀 Installation
-
-### Prerequisites
-
-- Python 3.10 or higher
-- pip (Python package manager)
-- Virtual environment (recommended)
-
-### Step 1: Clone Repository
-
-```bash
-cd SecureVision
-```
-
-### Step 2: Create Virtual Environment
-
-**Windows:**
-```powershell
-python -m venv venv
-venv\Scripts\activate
-```
-
-**Linux/Mac:**
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### Step 3: Install Dependencies
-
-```powershell
-pip install -r requirements.txt
-```
-
-**Note:** If `androguard` installation fails (optional dependency), the system will still work with basic APK analysis.
-
-### Step 4: Train Models
-
-Train the machine learning models using the provided sample datasets:
-
-```powershell
-# Train URL phishing detector
-python training/train_url_model.py
-
-# Train message phishing detector
-python training/train_message_model.py
-
-# Train APK malware detector
-python training/train_apk_model.py
-```
-
-Each training script will:
-- Load the sample dataset
-- Extract features
-- Train multiple models (Logistic Regression, Random Forest)
-- Compare performance metrics
-- Save the best model
-
-### Step 5: Run Application
-
-```powershell
-python app.py
-```
-
-The application will be available at: **http://localhost:5000**
-
-## 📊 Using SecureVision
-
-### Dashboard
-
-Navigate to `http://localhost:5000` to access the dashboard showing:
-- Total scans performed
-- Threats detected
-- Safe results
-- Detection rate
-- Charts and recent scan history
-
-### URL Scanner
-
-1. Navigate to **URL Scanner**
-2. Enter a URL (e.g., `http://secure-login-verify.com`)
-3. Click **Scan URL**
-4. View results including:
-   - Prediction (SAFE/PHISHING)
-   - Confidence score
-   - Risk level
-   - Explanation
-   - Security recommendations
-
-### Message Scanner
-
-1. Navigate to **Message Scanner**
-2. Paste an email or SMS message
-3. Click **Analyze Message**
-4. View detected indicators and recommendations
-
-### APK Scanner
-
-1. Navigate to **APK Scanner**
-2. Upload an APK file (max 50MB)
-3. Click **Analyze APK**
-4. View analysis results
-
-**Important:** APK files are analyzed using static analysis only. The application is **NOT executed**.
-
-### History
-
-View all previous scans with filtering options by:
-- Scan type (URL/MESSAGE/APK)
-- Prediction result
-- Risk level
-
-## 🔬 Machine Learning Models
-
-### URL Phishing Detection
-
-**Features (20):**
-- URL length, domain length
-- Character counts (dots, hyphens, digits, special chars)
-- HTTPS presence
-- IP address detection
-- Subdomain count
-- Suspicious keywords (login, verify, account, etc.)
-
-**Models:** Logistic Regression, Random Forest  
-**Training Data:** 100 URLs (50 legitimate, 50 phishing)
-
-### Message Phishing Detection
-
-**Features:**
-- TF-IDF vectorization (1000 features, unigrams + bigrams)
-- Text characteristics (21 features)
-- Keyword categories: urgent, financial, security, threat, request
-
-**Models:** Logistic Regression, Random Forest  
-**Training Data:** 100 messages (50 safe, 50 phishing)
-
-### APK Malware Detection
-
-**Features (10):**
-- Permission counts
-- Dangerous permission count
-- Component counts (activities, services, receivers, providers)
-- DEX file count
-- File count
-
-**Models:** Logistic Regression, Random Forest  
-**Training Data:** 50 APK feature samples (25 safe, 25 malicious)
-
-**Analysis Method:**
-- Androguard (if available) for full static analysis
-- ZIP inspection fallback for basic features
-
-## 🧪 Running Tests
-
-```powershell
-# Run all tests
-pytest tests/ -v
-
-# Run specific test file
-pytest tests/test_url_detector.py -v
-
-# Run with coverage
-pytest tests/ --cov=. --cov-report=html
-```
-
-## 🔧 Configuration
-
-Configuration settings are in `config.py`:
-
-```python
-# Database
-SQLALCHEMY_DATABASE_URI = 'sqlite:///securevision.db'
-
-# File Upload
-MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB
-UPLOAD_FOLDER = 'uploads'
-
-# Model Paths
-URL_MODEL_PATH = 'models/url_model.pkl'
-MESSAGE_MODEL_PATH = 'models/message_model.pkl'
-APK_MODEL_PATH = 'models/apk_model.pkl'
-```
-
-## 📡 API Endpoints
-
-### Scan URL
-```http
-POST /api/scan/url
-Content-Type: application/json
-
-{
-  "url": "https://example.com"
-}
-```
-
-### Scan Message
-```http
-POST /api/scan/message
-Content-Type: application/json
-
-{
-  "message": "Your message text here..."
-}
-```
-
-### Scan APK
-```http
-POST /api/scan/apk
-Content-Type: multipart/form-data
-
-file: <apk_file>
-```
-
-### Get History
-```http
-GET /api/history?limit=50
-```
-
-### Get Statistics
-```http
-GET /api/statistics
-```
-
-## 📈 Dataset Format
-
-### URLs (CSV)
-```csv
-url,label
-https://www.google.com,0
-http://phishing-site.com/login,1
-```
-
-### Messages (CSV)
-```csv
-message,label
-"Hello, how are you?",0
-"URGENT: Your account will be suspended",1
-```
-
-### APK Features (CSV)
-```csv
-permission_count,dangerous_permission_count,...,label
-10,2,...,0
-35,15,...,1
-```
-
-## 🔒 Security Best Practices
-
-1. **File Upload Security:**
-   - Extension validation (.apk only)
-   - File size limits (50MB)
-   - Secure random filenames
-   - Temporary file cleanup
-
-2. **Input Validation:**
-   - URL format validation
-   - Message length limits
-   - SQL injection prevention (parameterized queries)
-
-3. **Safe Analysis:**
-   - No APK execution
-   - No automatic URL visiting
-   - Static analysis only
-
-4. **Error Handling:**
-   - User-friendly error messages
-   - Technical errors logged securely
-   - No stack trace exposure
-
-## 🚧 Future Enhancements (Phase 2+)
-
-### Planned Features
-
-- **Enhanced ML Models:** Deep learning, BERT, ensemble methods
-- **Larger Datasets:** Real-world datasets with 10,000+ samples
-- **Dynamic APK Analysis:** Sandbox execution in isolated environment
-- **Real-time URL Checking:** Actual website crawling and analysis
-- **Network Intrusion Detection:** Traffic analysis module
-- **User Authentication:** Multi-user support with RBAC
-- **Advanced XAI:** SHAP, LIME for model interpretability
-- **PDF Report Generation:** Automated threat reports
-- **Cloud Deployment:** Scalable cloud infrastructure
-- **API Rate Limiting:** Protection against abuse
-- **Real-time Threat Feeds:** Integration with threat intelligence
-
-### Extensibility
-
-The modular architecture allows easy addition of new detectors:
-
-```python
-# Example: Add new detector
-from detection.base_detector import BaseDetector
-
-class NewDetector(BaseDetector):
-    def predict(self, input_data):
-        # Implementation
-        pass
-```
-
-## 🐛 Troubleshooting
-
-### Androguard Import Error
-**Solution:** Androguard is optional. System will use basic ZIP analysis if unavailable.
-
-### Model Not Found Error
-**Solution:** Run training scripts before starting the application.
-
-### Port Already in Use
-**Solution:** Change port in `app.py`:
-```python
-app.run(port=5001)
-```
-
-### Database Locked
-**Solution:** Close any other instances accessing the SQLite database.
-
-## 👥 Contributors
-
-- **Your Name** - Final Year Engineering Student
-- **Project Guide** - Guide Name
-- **Institution** - Your College/University
-
-## 📄 License
-
-This project is created for educational purposes as part of a final-year engineering project.
-
-## 📞 Contact
-
-For questions or feedback:
-- Email: your.email@example.com
-- GitHub: github.com/yourusername
-
-## 🙏 Acknowledgments
-
-- Scikit-learn for machine learning tools
-- Flask for web framework
-- Androguard for APK analysis
-- Bootstrap for UI components
-- Chart.js for visualizations
 
 ---
 
-**⚠️ Disclaimer:** This is an educational project demonstrating ML applications in cybersecurity. It is NOT intended for production use without significant enhancements and should NOT be relied upon as the sole security measure. Always use multiple security tools and follow industry best practices.
+## Quick Start (local, no Docker)
 
-**Phase 1 (30%) - Foundation Complete** ✅
-#   S e c u r e V i s i o n - I n t e l l i g e n t - C y b e r s e c u r i t y - T h r e a t - D e t e c t i o n - a n d - A n a l y s i s - S y s t e m  
- 
+### Prerequisites
+- Python 3.10+
+- Node.js 20+
+- The `venv/` virtual environment already set up (run `python -m venv venv` if not)
+
+### 1 — Install everything
+
+```powershell
+# Python deps (from repo root)
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+pip install flask-cors==4.0.0
+
+# Node deps
+npm install            # root (installs concurrently)
+cd server && npm install && cd ..
+cd client && npm install && cd ..
+```
+
+### 2 — Start all three services
+
+```powershell
+npm run dev
+```
+
+This runs concurrently:
+| Service | Command | URL |
+|---------|---------|-----|
+| ML microservice | `python ml-service/app.py` | http://localhost:5000 |
+| Node gateway | `cd server && npm run dev` | http://localhost:4000 |
+| React SPA | `cd client && npm run dev` | http://localhost:5173 |
+
+Open **http://localhost:5173** in your browser.
+
+> **Legacy Flask UI** (original Jinja2 dashboard) still works independently:
+> ```powershell
+> python app.py   # → http://localhost:5000
+> ```
+
+---
+
+## Quick Start (Docker)
+
+```bash
+# Copy and edit env file
+cp server/.env.example .env
+
+docker compose up --build
+```
+
+| Service | URL |
+|---------|-----|
+| React SPA | http://localhost:5173 |
+| Node gateway | http://localhost:4000 |
+| ML service | http://localhost:5000 |
+
+---
+
+## Project Structure
+
+```
+SecureVision/
+├── app.py                  # Original Flask app (legacy, still works)
+├── package.json            # Root — npm run dev starts all 3 services
+├── docker-compose.yml
+│
+├── ml-service/             # Python Flask — JSON API only
+│   ├── app.py              # Stripped to 5 API endpoints + /api/health
+│   ├── requirements.txt
+│   └── Dockerfile
+│
+├── server/                 # Node.js / Express — API gateway
+│   ├── src/
+│   │   ├── index.ts        # Express app, rate limiting, CORS, pino logging
+│   │   ├── routes/         # Route definitions + multer APK upload
+│   │   ├── controllers/    # Request handlers (Zod validation)
+│   │   ├── services/       # mlClient — typed axios wrapper to Python
+│   │   ├── middleware/     # Error handler (Zod + Axios + generic)
+│   │   └── types/          # Shared TypeScript interfaces
+│   ├── package.json
+│   └── Dockerfile
+│
+├── client/                 # React / Vite / TypeScript SPA
+│   ├── src/
+│   │   ├── main.tsx        # App entry, React Router, QueryClient
+│   │   ├── pages/          # Dashboard, UrlScanner, MessageScanner, ApkScanner, History
+│   │   ├── components/
+│   │   │   ├── layout/     # Layout, Sidebar
+│   │   │   └── ui/         # RiskBadge, ConfidenceBar, ExplanationPanel,
+│   │   │                   # RecommendationList, ScanResultCard
+│   │   ├── api/client.ts   # Typed axios calls to Node gateway
+│   │   └── types/          # ScanResult, HistoryScan, Statistics …
+│   ├── package.json
+│   └── Dockerfile
+│
+├── detection/              # ML detectors (URL, Message, APK)
+├── features/               # Feature extractors (enhanced in Part A)
+├── explanation/            # Risk scoring, threat explanation, recommendations
+├── database/               # SQLAlchemy models (ScanHistory)
+├── models/                 # Trained .pkl files
+├── training/               # Model training scripts
+└── tests/                  # Pytest unit tests
+```
+
+---
+
+## API Reference
+
+All requests go through the Node gateway at `:4000/api/`.
+
+### Health
+```
+GET  /api/health
+```
+
+### Scan URL
+```
+POST /api/scan/url
+Content-Type: application/json
+{ "url": "https://example.com" }
+```
+
+### Scan Message
+```
+POST /api/scan/message
+Content-Type: application/json
+{ "message": "Your account has been suspended..." }
+```
+
+### Scan APK
+```
+POST /api/scan/apk
+Content-Type: multipart/form-data
+file: <apk_file>   (max 50 MB)
+```
+
+### History
+```
+GET  /api/history?limit=50
+```
+
+### Statistics
+```
+GET  /api/statistics
+```
+
+All scan responses share this shape:
+```json
+{
+  "success": true,
+  "prediction":    "SAFE | PHISHING | MALICIOUS",
+  "confidence":    0.94,
+  "risk_score":    82,
+  "risk_level":    "HIGH",
+  "explanation":   "...",
+  "recommendations": ["..."],
+  "indicators":    ["..."]
+}
+```
+
+---
+
+## ML Improvements (Part A summary)
+
+| Detector | Features (before) | Features (after) | Key additions |
+|----------|--------------------|-------------------|---------------|
+| APK | 10 | 44 | Androguard static analysis, API call patterns, certificate validation, obfuscation detection |
+| URL | 20 | 43 | WHOIS domain age, Levenshtein typosquatting (20 brands), suspicious TLD list, shortener detection |
+| Message | 21 | 57 | Social engineering scoring (scarcity/authority/fear/greed), linguistic analysis, 106 keywords |
+
+> Models need retraining with larger datasets to fully realise these improvements.
+> See `MIGRATION_NOTES.md` for dataset sourcing guidance.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| ML service | Python 3.10, Flask 3.0, SQLAlchemy, scikit-learn, XGBoost, Androguard |
+| Gateway | Node.js 20, Express 4, TypeScript 5, Zod, Multer, Pino, Helmet |
+| Frontend | React 18, Vite 5, TypeScript 5, Tailwind CSS 3, TanStack Query 5, Recharts, Framer Motion |
+| Database | SQLite (dev) — drop-in Postgres support via SQLAlchemy URI |
+| Containers | Docker Compose v3.9 |
+
+---
+
+## Running Tests
+
+```powershell
+.\venv\Scripts\Activate.ps1
+pytest tests/ -v
+```
+
+---
+
+## Stopping All Services
+
+`Ctrl+C` in the terminal running `npm run dev` stops all three processes.
+
+For Docker: `docker compose down`
+
+
+## Live URL Scanner
+
+The Live Scanner visits a URL in a sandboxed headless browser, collects behavioral evidence, and combines it with the ML score for a phishing verdict.
+
+### API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | /scan/url/live | Start a live scan job. Body: `{"url": "..."}`. Returns 202 with `{job_id, status}`. |
+| GET | /scan/url/live/:jobId | Poll job status. Returns `{status, result?, error?}`. |
+
+### Job lifecycle
+
+```
+queued → running → done
+                 → failed
+```
+
+Poll every 1.5 seconds until status is `done` or `failed` (5–15 seconds typical).
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LIVE_SCAN_ENABLED` | `true` | Feature flag — set to `false` to disable |
+| `LIVE_SCAN_TIMEOUT_MS` | `15000` | Playwright browser timeout in ms |
+| `LIVE_SCAN_MAX_WORKERS` | `2` | Max concurrent background scan workers |
+| `LLM_VERDICT_ENABLED` | `false` | Enable Anthropic API brand check (optional) |
+| `ANTHROPIC_API_KEY` | *(unset)* | Anthropic key for LLM verdict |
+
+### Setup
+
+```bash
+# Install dependencies
+pip install playwright==1.44.0 tldextract anthropic
+playwright install chromium
+
+# Or with Docker
+docker compose up --build live-scanner
+```
+
+### Security Notes
+
+- The scanner never submits forms or interacts with the page — observe-only
+- All requests (including sub-resources) are checked against an IP blocklist to prevent SSRF
+- Screenshots are held in memory only and never stored in the database
+- The Docker service runs as a non-root user with no access to the database volume
+- Recommended: add egress firewall rules at the Docker network level blocking RFC 1918 address spaces
