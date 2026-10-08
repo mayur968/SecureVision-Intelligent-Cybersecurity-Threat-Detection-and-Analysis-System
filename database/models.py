@@ -43,7 +43,9 @@ class ScanHistory(db.Model):
         """Get statistics for dashboard."""
         total_scans = ScanHistory.query.count()
         apk_scans = ScanHistory.query.filter_by(scan_type='APK').count()
-        url_scans = ScanHistory.query.filter_by(scan_type='URL').count()
+        url_scans = ScanHistory.query.filter(
+            ScanHistory.scan_type.in_(['URL', 'URL_LIVE'])
+        ).count()
         message_scans = ScanHistory.query.filter_by(scan_type='MESSAGE').count()
         
         threats_detected = ScanHistory.query.filter(
@@ -57,8 +59,9 @@ class ScanHistory(db.Model):
             scan_type='APK', prediction='MALICIOUS'
         ).count()
         
-        url_threats = ScanHistory.query.filter_by(
-            scan_type='URL', prediction='PHISHING'
+        url_threats = ScanHistory.query.filter(
+            ScanHistory.scan_type.in_(['URL', 'URL_LIVE']),
+            ScanHistory.prediction == 'PHISHING'
         ).count()
         
         message_threats = ScanHistory.query.filter_by(
