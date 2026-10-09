@@ -6,7 +6,7 @@ Main Flask Application
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from config import Config
 from utils.logger import logger
-from database.models import db, ScanHistory
+from database.models import db, ScanHistory, seed_model_registry
 import os
 import threading
 import time
@@ -21,10 +21,16 @@ Config.init_app(app)
 # Initialize database
 db.init_app(app)
 
-# Create database tables
-with app.app_context():
-    db.create_all()
-    logger.info("Database tables created successfully")
+# In test environments (TESTING=true) create tables directly.
+# In all other cases, run 'flask --app migrate_app db upgrade' separately.
+if Config.TESTING or app.config.get('TESTING'):
+    with app.app_context():
+        db.create_all()
+        logger.info("Test mode: database tables created via create_all()")
+else:
+    with app.app_context():
+        seed_model_registry()
+        logger.info("Database tables ready (migrations managed by Alembic)")
 
 
 # ============================================
@@ -105,6 +111,7 @@ from explanation.recommendations import RecommendationEngine
 from utils.validators import validate_url, validate_message
 from utils.file_security import generate_secure_filename, safe_file_cleanup
 from werkzeug.utils import secure_filename
+from database.ioc_extractor import extract_iocs
 
 # Initialize services
 url_detector = URLDetector()
@@ -215,6 +222,7 @@ def _run_live_scan_job(job_id: str, url: str):
         )
 
         # Save to database (no screenshot)
+        live_ioc_list = extract_iocs('URL_LIVE', url, live_result)
         with app.app_context():
             ScanHistory.save_scan(
                 scan_type='URL_LIVE',
@@ -223,7 +231,10 @@ def _run_live_scan_job(job_id: str, url: str):
                 confidence=combined_confidence,
                 risk_level=risk_result['risk_level'],
                 explanation=full_explanation[:2000],
-                recommendation='\n'.join(recommendations)
+                recommendation='\n'.join(recommendations),
+                risk_score=risk_result['risk_score'],
+                model_version='url_lr_v1.0',
+                ioc_list=live_ioc_list,
             )
 
         result_payload = {
@@ -313,6 +324,7 @@ def api_scan_url():
         )
         
         # Save to database
+        ioc_list = extract_iocs('URL', url, detection_result)
         ScanHistory.save_scan(
             scan_type='URL',
             input_value=url,
@@ -320,7 +332,10 @@ def api_scan_url():
             confidence=detection_result['confidence'],
             risk_level=risk_result['risk_level'],
             explanation=explanation,
-            recommendation='\n'.join(recommendations)
+            recommendation='\n'.join(recommendations),
+            risk_score=risk_result['risk_score'],
+            model_version='url_lr_v1.0',
+            ioc_list=ioc_list,
         )
         
         return jsonify({
@@ -398,6 +413,7 @@ def api_scan_message():
         
         # Save to database (truncate message for storage)
         message_preview = message[:500] if len(message) > 500 else message
+        ioc_list = extract_iocs('MESSAGE', message, detection_result)
         ScanHistory.save_scan(
             scan_type='MESSAGE',
             input_value=message_preview,
@@ -405,7 +421,10 @@ def api_scan_message():
             confidence=detection_result['confidence'],
             risk_level=risk_result['risk_level'],
             explanation=explanation,
-            recommendation='\n'.join(recommendations)
+            recommendation='\n'.join(recommendations),
+            risk_score=risk_result['risk_score'],
+            model_version='message_lr_v1.0',
+            ioc_list=ioc_list,
         )
         
         return jsonify({
@@ -496,7 +515,8 @@ def api_scan_apk():
             # Save to database
             file_info = detection_result.get('file_info', {})
             apk_filename = file_info.get('filename', file.filename)
-            
+            ioc_list = extract_iocs('APK', apk_filename, detection_result,
+                                     apk_file_path=file_path)
             ScanHistory.save_scan(
                 scan_type='APK',
                 input_value=apk_filename,
@@ -504,7 +524,10 @@ def api_scan_apk():
                 confidence=detection_result['confidence'],
                 risk_level=risk_result['risk_level'],
                 explanation=explanation,
-                recommendation='\n'.join(recommendations)
+                recommendation='\n'.join(recommendations),
+                risk_score=risk_result['risk_score'],
+                model_version='apk_lr_v1.0',
+                ioc_list=ioc_list,
             )
             
             return jsonify({
