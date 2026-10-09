@@ -703,4 +703,4 @@ def request_entity_too_large(error):
 
 if __name__ == '__main__':
     logger.info("Starting SecureVision application...")
-    app.run(debug=Config.DEBUG, host='0.0.0.0', port=5000)
+    app.run(debug=Config.DEBUG, host='0.0.0.0', port=5000, use_reloader=False)
