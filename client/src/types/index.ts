@@ -28,6 +28,13 @@ export interface HistoryScan {
   explanation:    string | null;
   recommendation: string | null;
   created_at:     string;
+  // Phase 1 additions (nullable for legacy rows)
+  risk_score:     number | null;
+  duration_ms:    number | null;
+  status:         string | null;
+  model_version:  string | null;   // null legacy rows show as "legacy" in UI
+  is_demo_data:   boolean | null;
+  ioc_count:      number | null;
 }
 
 export interface Statistics {

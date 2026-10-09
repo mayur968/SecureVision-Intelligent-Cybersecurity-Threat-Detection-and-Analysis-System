@@ -6,41 +6,39 @@ import type { HistoryScan, ScanTypeExtended, RiskLevel, Prediction } from '../ty
 import RiskBadge from '../components/ui/RiskBadge.js';
 
 type SortKey = 'created_at' | 'risk_level' | 'scan_type' | 'confidence';
-type SortDir = 'asc' | 'desc';
-
+type SortDir  = 'asc' | 'desc';
 const riskOrder: Record<RiskLevel, number> = { LOW: 0, MEDIUM: 1, HIGH: 2 };
 
 function exportCsv(scans: HistoryScan[]) {
   const header = 'id,scan_type,input_value,prediction,confidence,risk_level,created_at\n';
-  const rows = scans.map(s =>
+  const rows   = scans.map(s =>
     [s.id, s.scan_type, `"${s.input_value.replace(/"/g, '""')}"`,
      s.prediction, s.confidence, s.risk_level, s.created_at].join(',')
   ).join('\n');
-  const blob = new Blob([header + rows], { type: 'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `securevision_history_${Date.now()}.csv`;
+  const a = Object.assign(document.createElement('a'), {
+    href:     URL.createObjectURL(new Blob([header + rows], { type: 'text/csv' })),
+    download: `securevision_${Date.now()}.csv`,
+  });
   a.click();
 }
 
 export default function History() {
-  const [limit, setLimit] = useState(50);
+  const [limit,      setLimit]      = useState(50);
   const [typeFilter, setTypeFilter] = useState<ScanTypeExtended | 'ALL'>('ALL');
   const [riskFilter, setRiskFilter] = useState<RiskLevel | 'ALL'>('ALL');
   const [predFilter, setPredFilter] = useState<Prediction | 'ALL'>('ALL');
-  const [search, setSearch] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('created_at');
-  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [search,     setSearch]     = useState('');
+  const [sortKey,    setSortKey]    = useState<SortKey>('created_at');
+  const [sortDir,    setSortDir]    = useState<SortDir>('desc');
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['history', limit],
-    queryFn: () => api.getHistory(limit),
+    queryFn:  () => api.getHistory(limit),
     refetchInterval: 30_000,
   });
 
   const scans = data?.scans ?? [];
 
-  // Filter
   const filtered = scans.filter(s => {
     if (typeFilter !== 'ALL' && s.scan_type !== typeFilter) return false;
     if (riskFilter !== 'ALL' && s.risk_level !== riskFilter) return false;
@@ -49,13 +47,12 @@ export default function History() {
     return true;
   });
 
-  // Sort
   const sorted = [...filtered].sort((a, b) => {
     let cmp = 0;
-    if (sortKey === 'created_at') cmp = a.created_at.localeCompare(b.created_at);
-    else if (sortKey === 'risk_level') cmp = riskOrder[a.risk_level] - riskOrder[b.risk_level];
-    else if (sortKey === 'scan_type') cmp = a.scan_type.localeCompare(b.scan_type);
-    else if (sortKey === 'confidence') cmp = a.confidence - b.confidence;
+    if      (sortKey === 'created_at') cmp = a.created_at.localeCompare(b.created_at);
+    else if (sortKey === 'risk_level') cmp = (riskOrder[a.risk_level ?? 'LOW'] ?? 0) - (riskOrder[b.risk_level ?? 'LOW'] ?? 0);
+    else if (sortKey === 'scan_type')  cmp = (a.scan_type ?? '').localeCompare(b.scan_type ?? '');
+    else if (sortKey === 'confidence') cmp = (a.confidence ?? 0) - (b.confidence ?? 0);
     return sortDir === 'asc' ? cmp : -cmp;
   });
 
@@ -67,120 +64,157 @@ export default function History() {
   function SortTh({ k, label }: { k: SortKey; label: string }) {
     const active = sortKey === k;
     return (
-      <th className="cursor-pointer select-none pb-2 pr-4 text-left" onClick={() => toggleSort(k)}>
-        <span className={`text-xs uppercase tracking-wider ${active ? 'text-cyan-400' : 'text-slate-500 hover:text-slate-300'}`}>
-          {label} {active ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+      <th className="cursor-pointer select-none px-4 py-3 text-left" onClick={() => toggleSort(k)}>
+        <span className={`section-label inline-flex items-center gap-1 ${active ? 'text-accent-glow' : 'hover:text-content-secondary'}`}>
+          {label}
+          <span className="text-2xs">{active ? (sortDir === 'asc' ? '↑' : '↓') : ''}</span>
         </span>
       </th>
     );
   }
 
+  const SelectFilter = ({ label, opts, value, onChange }: {
+    label: string; opts: string[]; value: string; onChange: (v: string) => void;
+  }) => (
+    <select value={value} onChange={e => onChange(e.target.value)}
+      className="rounded border border-surface-muted bg-surface-raised px-2.5 py-1.5 text-xs text-content-secondary outline-none focus:border-accent transition-colors">
+      {opts.map(o => <option key={o}>{o}</option>)}
+    </select>
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 max-w-screen-xl">
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">Scan History</h1>
-          <p className="mt-1 text-sm text-slate-400">{filtered.length} of {scans.length} scans shown</p>
+          <h1 className="text-xl font-semibold text-content-primary">Scan History</h1>
+          <p className="mt-0.5 text-sm text-content-muted">
+            {filtered.length} of {scans.length} records
+          </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => refetch()}
-            className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-700">
-            ↻ Refresh
+          <button onClick={() => refetch()} className="btn-ghost text-xs px-3 py-1.5">
+            <span className="flex items-center gap-1.5">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M10 6A4 4 0 1 1 6 2M10 2v4H6"/></svg>
+              Refresh
+            </span>
           </button>
-          <button onClick={() => exportCsv(sorted)} disabled={!sorted.length}
-            className="rounded-lg bg-cyan-500 px-3 py-1.5 text-sm font-semibold text-slate-900 hover:bg-cyan-400 disabled:opacity-40">
-            ↓ CSV
+          <button onClick={() => exportCsv(sorted)} disabled={!sorted.length} className="btn-primary text-xs px-3 py-1.5">
+            <span className="flex items-center gap-1.5">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M6 1v7M3 5l3 3 3-3"/><path d="M2 9v1.5a.5.5 0 0 0 .5.5h7a.5.5 0 0 0 .5-.5V9"/></svg>
+              Export CSV
+            </span>
           </button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search input value…"
-          className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-500 w-48" />
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative">
+          <svg className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-content-muted" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="5" cy="5" r="3.5"/><path d="m7.5 7.5 2.5 2.5"/></svg>
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search…"
+            className="rounded border border-surface-muted bg-surface-raised py-1.5 pl-7 pr-3 text-xs text-content-secondary outline-none placeholder:text-content-disabled focus:border-accent w-40 transition-colors" />
+        </div>
 
-        {([['Type', ['ALL','URL','MESSAGE','APK','URL_LIVE'], typeFilter, setTypeFilter],
-           ['Risk',  ['ALL','LOW','MEDIUM','HIGH'], riskFilter, setRiskFilter],
-           ['Result',['ALL','SAFE','PHISHING','MALICIOUS'], predFilter, setPredFilter],
-        ] as const).map(([lbl, opts, val, setter]: any) => (
-          <select key={lbl} value={val} onChange={e => setter(e.target.value)}
-            className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-200 outline-none focus:border-cyan-500">
-            {opts.map((o: string) => <option key={o}>{o}</option>)}
-          </select>
-        ))}
+        <SelectFilter label="Type"   opts={['ALL','URL','MESSAGE','APK','URL_LIVE']} value={typeFilter} onChange={v => setTypeFilter(v as any)} />
+        <SelectFilter label="Risk"   opts={['ALL','LOW','MEDIUM','HIGH']}            value={riskFilter} onChange={v => setRiskFilter(v as any)} />
+        <SelectFilter label="Result" opts={['ALL','SAFE','PHISHING','MALICIOUS']}    value={predFilter} onChange={v => setPredFilter(v as any)} />
 
         <select value={limit} onChange={e => setLimit(Number(e.target.value))}
-          className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-200 outline-none focus:border-cyan-500">
+          className="rounded border border-surface-muted bg-surface-raised px-2.5 py-1.5 text-xs text-content-secondary outline-none focus:border-accent transition-colors">
           {[25, 50, 100].map(n => <option key={n} value={n}>Show {n}</option>)}
         </select>
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900 overflow-hidden">
+      <div className="card overflow-hidden">
         {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <span className="h-6 w-6 animate-spin rounded-full border-2 border-cyan-500 border-t-transparent" />
+          <div data-testid="loading-state" className="flex h-48 items-center justify-center">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
           </div>
         ) : isError ? (
-          <p className="p-6 text-sm text-red-400">Failed to load history</p>
+          <div data-testid="error-state" className="flex h-48 flex-col items-center justify-center gap-3 text-center p-5">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round"><circle cx="16" cy="16" r="13"/><path d="M16 10v6M16 21v1"/></svg>
+            <p className="text-sm font-semibold text-sev-critical">Failed to load history</p>
+            <p className="text-xs text-content-muted">Check that the Flask backend is running on port 5000.</p>
+            <button onClick={() => refetch()} className="btn-ghost text-xs px-3 py-1.5 mt-1">Retry</button>
+          </div>
         ) : sorted.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <p className="text-3xl">📋</p>
-            <p className="mt-3 text-sm text-slate-400">{scans.length ? 'No results match your filters' : 'No scans yet — try the scanners!'}</p>
+          <div data-testid="empty-state" className="flex h-48 flex-col items-center justify-center gap-2 text-center">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#334155" strokeWidth="1.5" strokeLinecap="round"><rect x="4" y="4" width="24" height="24" rx="3"/><path d="M10 10h12M10 16h12M10 22h6"/></svg>
+            <p className="text-sm text-content-muted">
+              {scans.length ? 'No results match your filters' : 'No scans yet — run a scan to see history'}
+            </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-slate-800">
-                <tr>
-                  <SortTh k="scan_type"  label="Type"       />
-                  <th className="pb-2 pr-4 text-left text-xs uppercase tracking-wider text-slate-500">Input</th>
-                  <th className="pb-2 pr-4 text-left text-xs uppercase tracking-wider text-slate-500">Result</th>
-                  <SortTh k="risk_level" label="Risk"       />
-                  <SortTh k="confidence" label="Confidence" />
-                  <SortTh k="created_at" label="Time"       />
-                </tr>
-              </thead>
-              <tbody>
-                {sorted.map((s, idx) => (
-                  <motion.tr key={s.id}
-                    initial={{ opacity: 0, x: -4 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.02 }}
-                    className="border-b border-slate-800/50 hover:bg-slate-800/30">
-                    <td className="py-3 pr-4">
-                      <span className="rounded bg-slate-800 px-2 py-0.5 font-mono text-xs text-cyan-400">
-                        {s.scan_type === 'URL_LIVE' ? 'URL' : s.scan_type}
-                      </span>
+          <table className="w-full">
+            <thead className="border-b border-surface-border">
+              <tr>
+                <SortTh k="scan_type"  label="Type"       />
+                <th className="px-4 py-3 text-left"><span className="section-label">Input</span></th>
+                <th className="px-4 py-3 text-left"><span className="section-label">Result</span></th>
+                <SortTh k="risk_level" label="Risk"       />
+                <SortTh k="confidence" label="Confidence" />
+                <th className="px-4 py-3 text-left"><span className="section-label">Model</span></th>
+                <SortTh k="created_at" label="Time"       />
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((s, i) => (
+                <motion.tr key={s.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: Math.min(i * 0.015, 0.3) }}
+                  className="border-b border-surface-border/40 hover:bg-surface-overlay transition-colors">
+                  {/* Type */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <span className="chip">{s.scan_type === 'URL_LIVE' ? 'URL' : s.scan_type}</span>
                       {s.scan_type === 'URL_LIVE' && (
-                        <span className="ml-1 rounded bg-teal-900/50 px-1.5 py-0.5 text-xs text-teal-400 font-semibold">
-                          Live
-                        </span>
+                        <span className="chip bg-sev-info-bg text-sev-info">Live</span>
                       )}
-                    </td>
-                    <td className="py-3 pr-4 max-w-[200px]">
-                      <span className="block truncate font-mono text-xs text-slate-300" title={s.input_value}>
-                        {s.input_value}
-                      </span>
-                    </td>
-                    <td className="py-3 pr-4">
-                      <RiskBadge prediction={s.prediction} size="sm" />
-                    </td>
-                    <td className="py-3 pr-4">
-                      <RiskBadge level={s.risk_level} size="sm" />
-                    </td>
-                    <td className="py-3 pr-4 font-mono text-xs text-slate-400">
-                      {Math.round(s.confidence * 100)}%
-                    </td>
-                    <td className="py-3 text-xs text-slate-500 whitespace-nowrap">
-                      {new Date(s.created_at).toLocaleString()}
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </td>
+                  {/* Input */}
+                  <td className="px-4 py-3 max-w-[200px]">
+                    <span className="block truncate font-mono text-xs text-content-secondary" title={s.input_value}>
+                      {s.input_value}
+                    </span>
+                  </td>
+                  {/* Result */}
+                  <td className="px-4 py-3">
+                    <RiskBadge prediction={s.prediction} size="sm" />
+                  </td>
+                  {/* Risk */}
+                  <td className="px-4 py-3">
+                    <RiskBadge level={s.risk_level} size="sm" />
+                  </td>
+                  {/* Confidence */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1 w-16 rounded-full bg-surface-overlay overflow-hidden">
+                        <div className="h-full rounded-full bg-accent" style={{ width: `${Math.round(s.confidence * 100)}%` }} />
+                      </div>
+                      <span className="font-mono text-xs text-content-muted">{Math.round(s.confidence * 100)}%</span>
+                    </div>
+                  </td>
+                  {/* Model Version */}
+                  <td className="px-4 py-3">
+                    {s.model_version === 'legacy' || s.model_version == null ? (
+                      <span className="chip bg-surface-overlay text-content-disabled">legacy</span>
+                    ) : (
+                      <code className="chip font-mono text-2xs text-content-secondary">{s.model_version}</code>
+                    )}
+                  </td>
+                  {/* Time */}
+                  <td className="px-4 py-3 text-xs text-content-muted whitespace-nowrap">
+                    {new Date(s.created_at).toLocaleString()}
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
     </div>
