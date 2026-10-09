@@ -209,6 +209,49 @@ pytest tests/ -v
 
 ---
 
+## Database Migrations
+
+SecureVision uses **Flask-Migrate** (Alembic) to manage database schema changes.
+
+### Initial Setup (first time only)
+
+If you cloned the repo and have no `securevision.db` yet, run:
+
+```powershell
+.\venv\Scripts\Activate.ps1
+flask --app migrate_app db upgrade
+```
+
+This creates the database and applies all migrations to bring it to the latest schema.
+
+### Applying New Migrations
+
+When pulling updates that include new migration files in `migrations/versions/`, run:
+
+```powershell
+.\venv\Scripts\Activate.ps1
+flask --app migrate_app db upgrade
+```
+
+### Checking Migration Status
+
+```powershell
+flask --app migrate_app db current   # Show current revision
+flask --app migrate_app db history   # Show migration chain
+```
+
+### Important Notes
+
+- **Never run `db.create_all()` in production** — it bypasses migrations and can cause schema drift.
+- **Back up `securevision.db` before upgrading** to a new migration, especially in production.
+- The test suite (`TESTING=true`) uses `db.create_all()` for speed; that's OK in test environments only.
+- To opt into Postgres instead of SQLite, set `DATABASE_URL` environment variable. Example:
+  ```
+  DATABASE_URL=postgresql://user:pass@localhost/securevision
+  ```
+
+---
+
 ## Stopping All Services
 
 `Ctrl+C` in the terminal running `npm run dev` stops all three processes.
