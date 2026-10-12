@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'cv02','cv03','cv04','cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #0b0f1a;
+    color: #f1f5f9;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-feature-settings: normal;
+  }
+
+  /* Refined scrollbar — matches the dark surface palette */
+  ::-webkit-scrollbar              { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track        { background: transparent; }
+  ::-webkit-scrollbar-thumb        { background: #1f2d45; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover  { background: #2d3f5c; }
+  ::-webkit-scrollbar-corner       { background: transparent; }
+
+  /* Focus ring — accessible but unobtrusive */
+  :focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+}
+
+/* ── Component layer — reusable class groups ─────────────────────────────── */
+@layer components {
+  /* Surface cards */
+  .card {
+    @apply rounded-card border border-surface-border bg-surface-raised shadow-card;
+  }
+  .card-elevated {
+    @apply rounded-card border border-surface-muted bg-surface-overlay shadow-card-md;
+  }
+
+  /* Section headers */
+  .section-label {
+    @apply text-2xs font-semibold uppercase tracking-widest text-content-muted;
+  }
+
+  /* Primary button */
+  .btn-primary {
+    @apply rounded bg-accent px-4 py-2 text-sm font-semibold text-white
+           transition-all duration-150 hover:bg-accent-hover active:scale-[0.98]
+           disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    @apply rounded border border-surface-muted bg-transparent px-4 py-2 text-sm
+           font-medium text-content-secondary transition-all duration-150
+           hover:border-surface-muted hover:bg-surface-overlay hover:text-content-primary
+           disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  /* Form input */
+  .input {
+    @apply w-full rounded border border-surface-muted bg-surface-raised
+           px-3 py-2 text-sm text-content-primary outline-none ring-0
+           placeholder:text-content-disabled
+           transition-colors duration-150
+           focus:border-accent focus:ring-1 focus:ring-accent/30;
+  }
+
+  /* Monospace data value */
+  .data-value {
+    @apply font-mono text-sm text-content-primary;
+  }
+
+  /* Inline code / hash chips */
+  .chip {
+    @apply inline-flex items-center rounded-sm bg-surface-overlay px-2 py-0.5
+           font-mono text-2xs text-content-secondary;
+  }
+}
+
+/* ── Utility layer extras ────────────────────────────────────────────────── */
+@layer utilities {
+  .text-gradient-blue {
+    background: linear-gradient(135deg, #60a5fa, #2563eb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  /* Live pulse indicator */
+  .live-dot::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 9999px;
+    background: #22c55e;
+    margin-right: 6px;
+    animation: pulseDot 1.8s ease-in-out infinite;
+  }
+}

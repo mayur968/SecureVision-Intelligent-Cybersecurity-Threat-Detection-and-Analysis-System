@@ -3,11 +3,35 @@
 import base64
 import ipaddress
 import os
+import re
 import socket
 import time
 from urllib.parse import urlparse
 
 from utils.logger import logger
+
+# ---------------------------------------------------------------------------
+# Pre-compiled regexes for brand detection noise removal
+# ---------------------------------------------------------------------------
+
+# Strips browser User-Agent tokens that contain brand names but are not
+# brand impersonation signals (e.g. "AppleWebKit/537.36", "Chrome/124").
+_UA_NOISE_RE = re.compile(
+    r'Mozilla/[\d.]+ \([^)]*\)'        # Mozilla/5.0 (Windows NT …)
+    r'|AppleWebKit/[\d.]+'             # AppleWebKit/537.36
+    r'|Chrome/[\d.]+'                  # Chrome/124.0
+    r'|Safari/[\d.]+'                  # Safari/537.36
+    r'|Firefox/[\d.]+'                 # Firefox/125.0
+    r'|Gecko/[\d.]+'                   # Gecko/20100101
+    r'|Trident/[\d.]+'                 # Trident/7.0
+    r'|Edge/[\d.]+'                    # Edge/18.0
+    r'|OPR/[\d.]+'                     # OPR/109.0
+    r'|Version/[\d.]+'                 # Version/16.0 (Safari)
+    r'|Mobile/\w+'                     # Mobile/15E148
+    r'|YaBrowser/[\d.]+'              # Yandex browser
+    ,
+    re.IGNORECASE,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -141,13 +165,52 @@ def _compute_evidence_and_score(
         evidence.append(f'Form submits to a different domain: {suspicious_forms[0]}')
 
     # -- brand mismatch -------------------------------------------------------
-    page_text = (
-        (dom_data.get('title') or '') + ' ' + (dom_data.get('visibleText') or '')
-    ).lower()
+    # Strategy (in order):
+    #   1. Strip User-Agent noise from visible text before any matching.
+    #   2. Use whole-word regex (\bbrand\b) so 'apple' never matches 'AppleWebKit'.
+    #   3. Require EITHER:
+    #        a. Brand appears in title/h1/h2/img-alt, OR 3+ whole-word hits in text
+    #      AND
+    #        b. Page also has a credential-collection indicator (password field OR
+    #           sensitive inputs). A news article mentioning Apple many times is not
+    #           phishing unless it also tries to collect credentials.
+
+    # Strip UA noise before matching
+    clean_title = _UA_NOISE_RE.sub('', dom_data.get('title') or '').lower()
+    clean_text  = _UA_NOISE_RE.sub('', dom_data.get('visibleText') or '').lower()
+    h_text      = _UA_NOISE_RE.sub('', dom_data.get('headingText') or '').lower()
+    img_alt     = _UA_NOISE_RE.sub('', dom_data.get('imgAltText') or '').lower()
+
+    has_credentials = dom_data.get('hasPasswordField') or dom_data.get('sensitiveInputs')
+
     for brand, official_domain in BRAND_MAP.items():
-        if brand in page_text and final_registered and official_domain not in final_registered:
+        # Skip if this page is actually on the brand's official domain
+        if final_registered and official_domain in final_registered:
+            continue
+
+        brand_re = re.compile(r'\b' + re.escape(brand) + r'\b', re.IGNORECASE)
+
+        # Check prominent locations: title, headings, img alt
+        in_prominent = bool(
+            brand_re.search(clean_title)
+            or brand_re.search(h_text)
+            or brand_re.search(img_alt)
+        )
+
+        # Count whole-word hits in visible text
+        text_hits = len(brand_re.findall(clean_text))
+
+        # Condition A: prominent placement OR 3+ text mentions
+        brand_present = in_prominent or text_hits >= 3
+
+        # Condition B: page also solicits credentials
+        if brand_present and has_credentials:
             score += SCORE_WEIGHTS['brand_mismatch']
-            evidence.append(f'Page impersonates {brand!r} but domain is {final_registered!r}')
+            evidence.append(
+                f"Page impersonates '{brand}' (domain: {final_registered!r}) — "
+                f"brand mentioned {'prominently' if in_prominent else f'{text_hits}x'} "
+                f"with credential-collection inputs"
+            )
             break  # one brand-mismatch hit is enough
 
     # -- cross-domain redirect ------------------------------------------------
@@ -361,6 +424,10 @@ def scan_live(url: str, timeout_ms: int = 15000) -> dict:
                                 parseInt(s.height) === 0
                             );
                         }).length;
+                    const headings = Array.from(document.querySelectorAll('h1, h2'))
+                        .map(h => h.innerText || h.textContent || '').join(' ');
+                    const imgAlts = Array.from(document.querySelectorAll('img[alt]'))
+                        .map(i => i.alt).join(' ');
                     return {
                         title:            document.title,
                         finalUrl:         window.location.href,
@@ -369,6 +436,8 @@ def scan_live(url: str, timeout_ms: int = 15000) -> dict:
                         sensitiveInputs:  sensitiveInputs,
                         formActions:      formActions,
                         hiddenIframes:    hiddenIframes,
+                        headingText:      headings.slice(0, 500),
+                        imgAltText:       imgAlts.slice(0, 500),
                     };
                 }"""
             )

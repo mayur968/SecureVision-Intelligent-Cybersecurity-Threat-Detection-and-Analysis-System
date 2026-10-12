@@ -15,9 +15,46 @@ from config import Config
 from utils.logger import logger
 
 
+# Registrable domains that are unconditionally safe (whitelist guard).
+# Covers any subdomain: accounts.google.com -> google.com -> SAFE.
+TRUSTED_DOMAINS = frozenset({
+    'google.com', 'youtube.com', 'facebook.com', 'instagram.com', 'twitter.com',
+    'linkedin.com', 'microsoft.com', 'apple.com', 'amazon.com', 'netflix.com',
+    'paypal.com', 'ebay.com', 'wikipedia.org', 'reddit.com', 'github.com',
+    'stackoverflow.com', 'dropbox.com', 'adobe.com', 'salesforce.com', 'ibm.com',
+    'oracle.com', 'yahoo.com', 'outlook.com', 'live.com', 'office.com',
+    'windows.com', 'bing.com', 'skype.com', 'xbox.com', 'azure.com',
+    'icloud.com', 'bankofamerica.com', 'wellsfargo.com', 'chase.com',
+    'citibank.com', 'americanexpress.com', 'discover.com', 'usbank.com',
+    'tdbank.com', 'schwab.com', 'fidelity.com', 'vanguard.com', 'etrade.com',
+    'visa.com', 'mastercard.com', 'mozilla.org', 'w3.org', 'python.org',
+    'cloudflare.com', 'shopify.com', 'stripe.com', 'zoom.us', 'slack.com',
+    'twilio.com', 'walmart.com', 'target.com', 'bestbuy.com', 'costco.com',
+    'homedepot.com', 'lowes.com', 'etsy.com', 'aliexpress.com',
+    'wix.com', 'wordpress.com', 'blogger.com', 'medium.com', 'substack.com',
+    'quora.com', 'tumblr.com', 'flickr.com', 'vimeo.com', 'soundcloud.com',
+    'spotify.com', 'pandora.com', 'hulu.com', 'disneyplus.com',
+    'hbomax.com', 'primevideo.com', 'peacocktv.com', 'espn.com',
+    'nfl.com', 'nba.com', 'cnn.com', 'bbc.com', 'nytimes.com',
+    'washingtonpost.com', 'reuters.com', 'apnews.com', 'theguardian.com',
+    'forbes.com', 'bloomberg.com', 'wsj.com', 'techcrunch.com', 'wired.com',
+    'arstechnica.com', 'theverge.com', 'engadget.com', 'cnet.com',
+    'pcmag.com', 'zdnet.com', 'nasa.gov', 'nih.gov', 'cdc.gov',
+    'irs.gov', 'usa.gov', 'whitehouse.gov', 'mit.edu', 'stanford.edu',
+    'harvard.edu', 'berkeley.edu', 'twitch.tv', 'discord.com',
+    'telegram.org', 'whatsapp.com', 'signal.org', 'proton.me',
+    'snapchat.com', 'tiktok.com', 'pinterest.com',
+    'squarespace.com', 'booking.com', 'airbnb.com', 'expedia.com',
+    'tripadvisor.com', 'indeed.com', 'glassdoor.com',
+})
+
+
 class URLDetector:
     """URL phishing detector using trained ML model."""
     
+    # Expose for tests / external access
+    TRUSTED_DOMAINS = TRUSTED_DOMAINS
+
     def __init__(self):
         """Initialize URL detector."""
         self.feature_extractor = URLFeatureExtractor()
@@ -26,6 +63,39 @@ class URLDetector:
         
         # Try to load model
         self._load_model()
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    def _extract_base_domain(self, url: str) -> str:
+        """Return the registrable domain (domain + public suffix) for *url*.
+
+        Uses tldextract when available (most accurate), falls back to a simple
+        two-label split that works for the vast majority of .com/.org/.net/etc.
+        """
+        try:
+            fe = self.feature_extractor
+            if fe.tldextract_available:
+                from urllib.parse import urlparse
+                parsed = urlparse(url if '://' in url else 'https://' + url)
+                host = parsed.netloc.split(':')[0].lower()
+                ext = fe.tldextract.extract(host)
+                if ext.domain and ext.suffix:
+                    return f"{ext.domain}.{ext.suffix}"
+                return host
+            else:
+                from urllib.parse import urlparse
+                parsed = urlparse(url if '://' in url else 'https://' + url)
+                host = parsed.netloc.lower().split(':')[0]
+                if host.startswith('www.'):
+                    host = host[4:]
+                parts = host.split('.')
+                if len(parts) >= 2:
+                    return '.'.join(parts[-2:])
+                return host
+        except Exception:
+            return ''
     
     def _load_model(self):
         """Load trained model from disk."""
@@ -67,6 +137,22 @@ class URLDetector:
         try:
             # Preprocess URL
             url_clean = normalize_url(url)
+
+            # ── Whitelist guard ──────────────────────────────────────────────
+            base_domain = self._extract_base_domain(url_clean)
+            if base_domain and base_domain in TRUSTED_DOMAINS:
+                logger.info(f"URL whitelisted: {base_domain} -> SAFE")
+                return {
+                    'prediction': 'SAFE',
+                    'confidence': 0.99,
+                    'features': {},
+                    'important_features': {},
+                    'model_available': self.model_loaded,
+                    'url_analyzed': url_clean,
+                    'whitelisted': True,
+                    'whitelisted_domain': base_domain,
+                }
+            # ────────────────────────────────────────────────────────────────
             
             # Extract features
             features = self.feature_extractor.extract_features(url_clean)

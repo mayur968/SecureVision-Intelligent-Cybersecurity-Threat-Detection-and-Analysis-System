@@ -1,0 +1,18 @@
+{
+  "name": "securevision",
+  "version": "2.0.0",
+  "description": "SecureVision monorepo — ML microservice + Node gateway + React SPA",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --kill-others --names \"ML,API,UI\" --prefix-colors \"cyan,yellow,magenta\" \"npm run dev:ml\" \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:ml": "cd ml-service && ..\\venv\\Scripts\\python app.py",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "build": "cd server && npm run build && cd ../client && npm run build",
+    "lint": "cd server && npm run lint && cd ../client && npm run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

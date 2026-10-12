@@ -137,8 +137,8 @@ def main():
     # Ensure models directory exists
     Config.MODELS_DIR.mkdir(exist_ok=True)
     
-    # Initialize feature extractor
-    feature_extractor = URLFeatureExtractor()
+    # Initialize feature extractor (skip WHOIS during training to avoid timeouts)
+    feature_extractor = URLFeatureExtractor(skip_whois=True)
     
     # Load data
     df = load_data(Config.URL_DATA_PATH)

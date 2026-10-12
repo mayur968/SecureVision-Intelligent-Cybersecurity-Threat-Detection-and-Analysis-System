@@ -34,6 +34,23 @@ cd client && npm install && cd ..
 
 ### 2 — Start all three services
 
+> **Important — always use the venv Python.**
+> Running `python app.py` or `pytest` with the system Python will fail because packages like
+> `playwright`, `tldextract`, and `androguard` are only installed in `venv/`.
+>
+> **Easiest way to start everything:**
+> ```powershell
+> .\run.ps1          # PowerShell
+> # or
+> run.bat            # Windows CMD
+> ```
+> To run tests:
+> ```powershell
+> .\run_tests.ps1    # PowerShell
+> # or
+> run_tests.bat      # Windows CMD
+> ```
+
 ```powershell
 npm run dev
 ```
@@ -203,6 +220,8 @@ All scan responses share this shape:
 ## Running Tests
 
 ```powershell
+.\run_tests.ps1
+# or manually:
 .\venv\Scripts\Activate.ps1
 pytest tests/ -v
 ```

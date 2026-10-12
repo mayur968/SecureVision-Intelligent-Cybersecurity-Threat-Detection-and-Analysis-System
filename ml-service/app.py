@@ -4,6 +4,32 @@ JSON-only API (no HTML rendering).
 Consumed by the Node.js/Express gateway.
 """
 
+import sys as _sys
+import os as _os
+
+def _check_venv():
+    """Warn loudly if not running from the project venv."""
+    venv_python = _os.path.normpath(_os.path.join(
+        _os.path.dirname(_os.path.abspath(__file__)), '..', 'venv', 'Scripts', 'python.exe'
+    ))
+    running = _sys.executable.replace('\\', '/')
+    expected = venv_python.replace('\\', '/')
+    if running.lower() != expected.lower() and not _os.environ.get('SKIP_VENV_CHECK'):
+        print(
+            "\n" + "=" * 70 + "\n"
+            "WARNING: You are NOT running from the project venv.\n"
+            f"  Running:  {_sys.executable}\n"
+            f"  Expected: {venv_python}\n"
+            "  Some packages (playwright, tldextract, androguard) may be missing.\n"
+            "  Run with:  .\\venv\\Scripts\\python.exe ml-service\\app.py\n"
+            "  Or use:    .\\run.bat  (Windows CMD)  /  .\\run.ps1  (PowerShell)\n"
+            + "=" * 70 + "\n",
+            file=_sys.stderr
+        )
+
+_check_venv()
+del _check_venv, _sys, _os
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from config import Config

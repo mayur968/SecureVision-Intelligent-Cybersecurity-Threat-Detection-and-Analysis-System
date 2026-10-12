@@ -1,0 +1,179 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <!-- Shield outer gradient: deep navy to teal -->
+    <linearGradient id="shieldGradOuter" x1="100" y1="0" x2="100" y2="185" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#1a6fa8"/>
+      <stop offset="50%"  stop-color="#1a8ab8"/>
+      <stop offset="100%" stop-color="#0d4f70"/>
+    </linearGradient>
+    <!-- Shield inner fill -->
+    <linearGradient id="shieldGradInner" x1="100" y1="15" x2="100" y2="175" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#1e7fa0"/>
+      <stop offset="100%" stop-color="#0e5878"/>
+    </linearGradient>
+    <!-- Eye/iris gradient: teal to blue-green -->
+    <radialGradient id="irisGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#0d9e8a"/>
+      <stop offset="40%"  stop-color="#0d8a9e"/>
+      <stop offset="100%" stop-color="#0a6a7a"/>
+    </radialGradient>
+    <!-- Pupil gradient -->
+    <radialGradient id="pupilGrad" cx="42%" cy="38%" r="55%">
+      <stop offset="0%"   stop-color="#0d3f52"/>
+      <stop offset="60%"  stop-color="#072838"/>
+      <stop offset="100%" stop-color="#031820"/>
+    </radialGradient>
+    <!-- Circuit board background -->
+    <linearGradient id="circuitBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#1a8ab8" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#0d9e8a" stop-opacity="0.08"/>
+    </linearGradient>
+    <!-- Highlight -->
+    <radialGradient id="shieldHighlight" cx="50%" cy="20%" r="60%">
+      <stop offset="0%"   stop-color="#5dd0e8" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#5dd0e8" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Drop shadow filter -->
+    <filter id="shadow" x="-10%" y="-5%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#051828" flood-opacity="0.5"/>
+    </filter>
+    <!-- Inner glow -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- ══ OUTER SHIELD ════════════════════════════════════════════════════ -->
+  <!-- Outer stroke/shadow shield -->
+  <path d="M100 6 L178 38 L178 105 Q178 160 100 192 Q22 160 22 105 L22 38 Z"
+        fill="url(#shieldGradOuter)" filter="url(#shadow)"/>
+
+  <!-- Inner shield face -->
+  <path d="M100 14 L170 44 L170 107 Q170 156 100 184 Q30 156 30 107 L30 44 Z"
+        fill="url(#shieldGradInner)"/>
+
+  <!-- Highlight overlay on shield -->
+  <path d="M100 14 L170 44 L170 107 Q170 156 100 184 Q30 156 30 107 L30 44 Z"
+        fill="url(#shieldHighlight)"/>
+
+  <!-- Inner shield bevel/border line -->
+  <path d="M100 20 L164 48 L164 108 Q164 152 100 178 Q36 152 36 108 L36 48 Z"
+        fill="none" stroke="#5dd0e8" stroke-width="1.2" stroke-opacity="0.35"/>
+
+  <!-- ══ CIRCUIT BOARD PATTERN (behind eye) ══════════════════════════════ -->
+  <g stroke="#5dd0e8" stroke-width="0.7" stroke-opacity="0.22" stroke-linecap="round">
+    <!-- Horizontal traces -->
+    <line x1="38"  y1="75"  x2="162" y2="75"/>
+    <line x1="40"  y1="90"  x2="160" y2="90"/>
+    <line x1="42"  y1="120" x2="158" y2="120"/>
+    <line x1="45"  y1="135" x2="155" y2="135"/>
+    <!-- Vertical traces -->
+    <line x1="60"  y1="55"  x2="60"  y2="148"/>
+    <line x1="80"  y1="48"  x2="80"  y2="152"/>
+    <line x1="100" y1="44"  x2="100" y2="155"/>
+    <line x1="120" y1="48"  x2="120" y2="152"/>
+    <line x1="140" y1="55"  x2="140" y2="148"/>
+    <!-- Corner dots -->
+    <circle cx="60"  cy="75"  r="1.8" fill="#5dd0e8" stroke="none" opacity="0.4"/>
+    <circle cx="80"  cy="75"  r="1.8" fill="#5dd0e8" stroke="none" opacity="0.4"/>
+    <circle cx="120" cy="75"  r="1.8" fill="#5dd0e8" stroke="none" opacity="0.4"/>
+    <circle cx="140" cy="75"  r="1.8" fill="#5dd0e8" stroke="none" opacity="0.4"/>
+    <circle cx="60"  cy="120" r="1.8" fill="#5dd0e8" stroke="none" opacity="0.4"/>
+    <circle cx="140" cy="120" r="1.8" fill="#5dd0e8" stroke="none" opacity="0.4"/>
+    <circle cx="80"  cy="135" r="1.5" fill="#5dd0e8" stroke="none" opacity="0.35"/>
+    <circle cx="120" cy="135" r="1.5" fill="#5dd0e8" stroke="none" opacity="0.35"/>
+    <!-- L-shaped connectors -->
+    <polyline points="48,65 55,65 55,75"  fill="none"/>
+    <polyline points="152,65 145,65 145,75" fill="none"/>
+    <polyline points="48,130 55,130 55,120" fill="none"/>
+    <polyline points="152,130 145,130 145,120" fill="none"/>
+  </g>
+
+  <!-- ══ EYE SHAPE ════════════════════════════════════════════════════════ -->
+  <!-- Eye white sclera -->
+  <ellipse cx="100" cy="88" rx="50" ry="30"
+           fill="white" opacity="0.9"/>
+
+  <!-- Iris -->
+  <circle cx="100" cy="88" r="23" fill="url(#irisGrad)" filter="url(#glow)"/>
+
+  <!-- Binary code ring around iris (subtle text effect) -->
+  <circle cx="100" cy="88" r="23" fill="none"
+          stroke="#0d3f52" stroke-width="4" stroke-opacity="0.3"/>
+
+  <!-- Binary text pattern on iris — rendered as tiny rect dashes -->
+  <g fill="#c8f0e8" font-family="monospace" font-size="3.8" opacity="0.55">
+    <!-- Row 1 -->
+    <text x="80"  y="73">10110</text>
+    <text x="96"  y="73">101</text>
+    <text x="108" y="73">10</text>
+    <!-- Row 2 -->
+    <text x="77"  y="79">1101</text>
+    <text x="91"  y="79">01010</text>
+    <text x="107" y="79">110</text>
+    <!-- Row 3 -->
+    <text x="79"  y="85">0101</text>
+    <text x="93"  y="85">1001</text>
+    <text x="106" y="85">011</text>
+    <!-- Row 4 -->
+    <text x="80"  y="91">1010</text>
+    <text x="94"  y="91">1101</text>
+    <text x="107" y="91">01</text>
+    <!-- Row 5 -->
+    <text x="80"  y="97">0110</text>
+    <text x="94"  y="97">100</text>
+    <text x="106" y="97">110</text>
+    <!-- Row 6 -->
+    <text x="81"  y="103">110100</text>
+    <text x="105" y="103">01</text>
+  </g>
+
+  <!-- Pupil -->
+  <circle cx="100" cy="87" r="11" fill="url(#pupilGrad)"/>
+
+  <!-- Pupil specular highlight -->
+  <ellipse cx="95.5" cy="82.5" rx="4.5" ry="3" fill="white" opacity="0.18" transform="rotate(-15 95.5 82.5)"/>
+
+  <!-- Pupil center dot -->
+  <circle cx="100" cy="87" r="2.5" fill="#0a2030" opacity="0.9"/>
+
+  <!-- Iris outer ring highlight -->
+  <circle cx="100" cy="88" r="23" fill="none" stroke="#5dd0e8" stroke-width="1.2" opacity="0.45"/>
+
+  <!-- Eye lash curves (upper and lower lid) -->
+  <path d="M50 88 Q75 64 100 62 Q125 64 150 88"
+        fill="none" stroke="#0d4f70" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M50 88 Q75 112 100 114 Q125 112 150 88"
+        fill="none" stroke="#0d4f70" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- ══ BOTTOM SECTION: URL + MAGNIFIER ═════════════════════════════════ -->
+  <!-- Horizontal separator line -->
+  <line x1="55" y1="123" x2="145" y2="123" stroke="#5dd0e8" stroke-width="0.8" stroke-opacity="0.4"/>
+
+  <!-- Molecule node (left of URL tag) -->
+  <circle cx="68" cy="138" r="3.5" fill="#5dd0e8" opacity="0.7"/>
+  <circle cx="61" cy="131" r="2"   fill="#5dd0e8" opacity="0.5"/>
+  <circle cx="62" cy="145" r="2"   fill="#5dd0e8" opacity="0.5"/>
+  <line x1="68" y1="138" x2="62" y2="131" stroke="#5dd0e8" stroke-width="0.9" stroke-opacity="0.5"/>
+  <line x1="68" y1="138" x2="63" y2="145" stroke="#5dd0e8" stroke-width="0.9" stroke-opacity="0.5"/>
+
+  <!-- URL pill badge -->
+  <rect x="74" y="131" width="28" height="14" rx="3.5"
+        fill="#1e6080" stroke="#5dd0e8" stroke-width="0.8" stroke-opacity="0.6"/>
+  <text x="88" y="141.5" font-family="Arial, sans-serif" font-size="7.5" font-weight="bold"
+        fill="#c8f0e8" text-anchor="middle" letter-spacing="0.5">URL</text>
+
+  <!-- Flag on URL badge -->
+  <line x1="102" y1="127" x2="102" y2="138" stroke="#5dd0e8" stroke-width="1" stroke-opacity="0.8"/>
+  <polygon points="102,127 108,130 102,133" fill="#5dd0e8" opacity="0.8"/>
+
+  <!-- Magnifying glass -->
+  <circle cx="118" cy="141" r="7.5" fill="none" stroke="#5dd0e8" stroke-width="2" stroke-opacity="0.85"/>
+  <circle cx="118" cy="141" r="4"   fill="#1e6080" opacity="0.5"/>
+  <line x1="123.3" y1="146.3" x2="129" y2="152" stroke="#5dd0e8" stroke-width="2.2"
+        stroke-linecap="round" stroke-opacity="0.85"/>
+
+  <!-- ══ SHIELD BOTTOM TIP HIGHLIGHT ════════════════════════════════════ -->
+  <path d="M88 178 Q100 188 112 178" fill="none" stroke="#5dd0e8" stroke-width="1" stroke-opacity="0.4"/>
+</svg>

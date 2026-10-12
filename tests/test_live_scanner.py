@@ -269,3 +269,91 @@ def test_post_live_scan_invalid_url(client):
 
 if __name__ == '__main__':
     unittest.main()
+
+# ── Unit tests: brand mismatch precision ─────────────────────────────────────
+
+class TestBrandMismatch(unittest.TestCase):
+    """Verify the improved brand-mismatch logic:
+    - UA echoes (AppleWebKit) must NOT trigger a hit
+    - Fake PayPal login on wrong domain MUST trigger
+    - News article with brand mentions but no creds must NOT trigger
+    """
+
+    def _compute(self, dom_data, final_url='https://example.com/'):
+        from detection.live_scanner import _compute_evidence_and_score
+        return _compute_evidence_and_score(dom_data, [], final_url)
+
+    def _base_dom(self, title='', text='', password=False, sensitive=False, forms=None):
+        return {
+            'title': title,
+            'finalUrl': 'https://example.com/',
+            'visibleText': text,
+            'headingText': '',
+            'imgAltText': '',
+            'hasPasswordField': password,
+            'sensitiveInputs': sensitive,
+            'formActions': forms or [],
+            'hiddenIframes': 0,
+        }
+
+    def test_ua_echo_no_brand_mismatch(self):
+        """httpbin-style page that echoes User-Agent must score 0 for brand mismatch."""
+        ua_echo = (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/124.0.0.0 Safari/537.36'
+        )
+        dom = self._base_dom(
+            title='httpbin.org',
+            text=f'"user-agent": "{ua_echo}"',
+            password=False,
+        )
+        evidence, score = self._compute(dom, final_url='https://httpbin.org/get')
+        brand_hits = [e for e in evidence if 'impersonates' in e.lower()]
+        self.assertEqual(brand_hits, [], f'Unexpected brand hit: {evidence}')
+        # Score should be 0 (no other signals)
+        self.assertEqual(score, 0)
+
+    def test_fake_paypal_login_flagged(self):
+        """Fake PayPal login page on a non-paypal domain must be flagged."""
+        dom = self._base_dom(
+            title='PayPal – Login',
+            text='Sign in to your PayPal account to send money',
+            password=True,          # has password field → credential signal
+            forms=['https://evil-collector.com/steal'],
+            sensitive=False,
+        )
+        evidence, score = self._compute(dom, final_url='https://paypal-secure-login.tk/')
+        brand_hits = [e for e in evidence if 'impersonates' in e.lower()]
+        self.assertTrue(len(brand_hits) >= 1, f'Expected brand hit, got: {evidence}')
+        self.assertGreaterEqual(score, 60, f'Expected PHISHING score, got {score}')
+
+    def test_news_article_apple_no_flag(self):
+        """News article mentioning Apple 5+ times with no login form must NOT be flagged."""
+        text = (
+            'Apple announced new products today. '
+            'Apple CEO Tim Cook presented at the Apple event. '
+            'Apple shares rose after the Apple keynote. '
+            'Many analysts praised Apple for the innovation.'
+        )  # 6 whole-word 'Apple' mentions
+        dom = self._base_dom(
+            title='Tech News – Apple Event 2024',
+            text=text,
+            password=False,   # no credential collection
+            sensitive=False,
+        )
+        evidence, score = self._compute(dom, final_url='https://technews.example.com/')
+        brand_hits = [e for e in evidence if 'impersonates' in e.lower()]
+        self.assertEqual(brand_hits, [], f'News article wrongly flagged: {evidence}')
+
+    def test_brand_in_heading_with_password_flagged(self):
+        """Brand in h1/h2 heading + password field must be flagged even with few text mentions."""
+        dom = self._base_dom(
+            title='Login',          # title is generic
+            text='Please enter your credentials below.',  # only 1 mention in heading
+            password=True,
+        )
+        dom['headingText'] = 'Microsoft Account Sign-In'  # brand in heading
+        evidence, score = self._compute(dom, final_url='https://microsoft-fake.net/')
+        brand_hits = [e for e in evidence if 'impersonates' in e.lower()]
+        self.assertTrue(len(brand_hits) >= 1, f'Expected brand hit via heading, got: {evidence}')
