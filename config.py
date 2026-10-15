@@ -57,6 +57,22 @@ class Config:
     # Testing flag — used by test suite to skip Alembic and use create_all()
     TESTING = os.environ.get('TESTING', '').lower() == 'true'
 
+    # Google OAuth 2.0 settings
+    GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', None)
+    GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', None)
+    GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'http://localhost:5000/auth/google/callback')
+
+    # Override SECRET_KEY from env (stronger default check)
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-change-me')
+
+    # Feature flag: expose legacy scan rows (no owner) to all visitors
+    SHOW_LEGACY_TO_ALL = os.environ.get('SHOW_LEGACY_TO_ALL', 'true').lower() == 'true'
+
+    @property
+    def GOOGLE_ENABLED(self) -> bool:
+        """True only when both Google OAuth credentials are configured."""
+        return bool(self.GOOGLE_CLIENT_ID and self.GOOGLE_CLIENT_SECRET)
+
     @staticmethod
     def init_app(app):
         """Initialize application configuration.

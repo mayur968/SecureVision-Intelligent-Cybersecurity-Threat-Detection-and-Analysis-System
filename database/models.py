@@ -1,10 +1,40 @@
-"""Database models for SecureVision — Phase 1 unified schema."""
+"""Database models for SecureVision — Phase 1 unified schema + Stage 2 auth."""
 
 from datetime import datetime, timezone
 from typing import Optional
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
+
+
+# ── Users ──────────────────────────────────────────────────────────────────────
+class User(db.Model):
+    """Authenticated user — created on first Google sign-in, updated on each login."""
+    __tablename__ = 'users'
+
+    id          = db.Column(db.Integer,     primary_key=True, autoincrement=True)
+    google_sub  = db.Column(db.String(255), unique=True, nullable=False)
+    email       = db.Column(db.String(255), nullable=True)
+    name        = db.Column(db.String(255), nullable=True)
+    picture     = db.Column(db.String(500), nullable=True)
+    created_at  = db.Column(db.DateTime,    nullable=False,
+                            default=lambda: datetime.now(timezone.utc))
+    last_login  = db.Column(db.DateTime,    nullable=True)
+
+    # Scans belonging to this user
+    scans = db.relationship('ScanHistory', back_populates='owner', lazy='dynamic',
+                            foreign_keys='ScanHistory.user_id')
+
+    def to_dict(self):
+        return {
+            'id':      self.id,
+            'name':    self.name,
+            'email':   self.email,
+            'picture': self.picture,
+        }
+
+    def __repr__(self):
+        return f'<User {self.id}: {self.email}>'
 
 
 # ── Association table: scan_history ↔ ioc (many-to-many) ──────────────────────
@@ -132,10 +162,20 @@ class ScanHistory(db.Model):
                                 nullable=True)
     is_demo_data   = db.Column(db.Boolean,      nullable=False,  default=False)
 
+    # ── Stage 2 additions ───────────────────────────────────────────────────
+    # NULL = legacy row (pre-auth). Set when user is signed in.
+    user_id        = db.Column(db.Integer,
+                                db.ForeignKey('users.id', ondelete='SET NULL'),
+                                nullable=True)
+    # Set for anonymous (guest) sessions so rows are queryable by session.
+    anon_session_id = db.Column(db.String(64),  nullable=True)
+
     # Relationships
     iocs           = db.relationship('IOC', secondary=scan_ioc, back_populates='scans',
                                      lazy='select')
     model          = db.relationship('ModelRegistry', foreign_keys=[model_version], lazy='select')
+    owner          = db.relationship('User', foreign_keys=[user_id], back_populates='scans',
+                                     lazy='select')
 
     def __repr__(self):
         return f'<ScanHistory {self.id}: {self.scan_type} - {self.prediction}>'
@@ -167,6 +207,10 @@ class ScanHistory(db.Model):
             'model_version':  self.model_version or 'legacy',
             'is_demo_data':   bool(self.is_demo_data),
             'ioc_count':      len(self.iocs),
+            # ── Stage 2 additions ─────────────────────────────────────────
+            'user_id':        self.user_id,
+            # True when both user_id and anon_session_id are NULL (pre-auth legacy row)
+            'is_legacy':      (self.user_id is None and self.anon_session_id is None),
         }
 
     # ── Queries ────────────────────────────────────────────────────────────────
@@ -210,16 +254,46 @@ class ScanHistory(db.Model):
         }
 
     @staticmethod
-    def get_recent_scans(limit=10):
-        return ScanHistory.query.order_by(
-            ScanHistory.created_at.desc()
-        ).limit(limit).all()
+    def get_recent_scans(limit=10, user_id=None, anon_session_id=None, show_legacy=True):
+        """Return recent scans filtered by ownership.
+
+        - user_id set:        return that user's scans only.
+        - anon_session_id set: return that guest session's scans + legacy rows (when show_legacy).
+        - Neither set:        return legacy rows (when show_legacy) or nothing.
+        - show_legacy=True:   always include rows where both user_id IS NULL and
+                              anon_session_id IS NULL (pre-auth rows).
+        """
+        from sqlalchemy import or_, and_
+
+        if user_id is not None:
+            return ScanHistory.query.filter_by(user_id=user_id).order_by(
+                ScanHistory.created_at.desc()
+            ).limit(limit).all()
+
+        # Guest or unauthenticated caller
+        filters = []
+        if anon_session_id is not None:
+            filters.append(ScanHistory.anon_session_id == anon_session_id)
+        if show_legacy:
+            filters.append(
+                and_(ScanHistory.user_id.is_(None),
+                     ScanHistory.anon_session_id.is_(None))
+            )
+
+        if filters:
+            return ScanHistory.query.filter(or_(*filters)).order_by(
+                ScanHistory.created_at.desc()
+            ).limit(limit).all()
+
+        # No filters match → return empty list
+        return []
 
     @staticmethod
     def save_scan(scan_type, input_value, prediction, confidence,
                   risk_level, explanation, recommendation,
                   risk_score=None, duration_ms=None, model_version=None,
-                  is_demo_data=False, ioc_list=None):
+                  is_demo_data=False, ioc_list=None,
+                  user_id=None, anon_session_id=None):
         """Create and persist a scan record, then attach extracted IOCs.
 
         ioc_list: optional list of dicts [{ioc_type, value}, ...] already
@@ -240,6 +314,8 @@ class ScanHistory(db.Model):
             status='completed',
             model_version=model_version,
             is_demo_data=is_demo_data,
+            user_id=user_id,
+            anon_session_id=anon_session_id,
         )
         db.session.add(scan)
         db.session.flush()   # get scan.id before committing

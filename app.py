@@ -29,11 +29,13 @@ def _check_venv():
 _check_venv()
 del _check_venv, _sys, _os
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask_cors import CORS
 from config import Config
 from utils.logger import logger
 from database.models import db, ScanHistory, seed_model_registry
 import os
+import secrets
 import threading
 import time
 import uuid
@@ -44,8 +46,15 @@ app = Flask(__name__)
 app.config.from_object(Config)
 Config.init_app(app)
 
+# CORS — allow the Vite dev server to make credentialed requests
+CORS(app, origins=['http://localhost:5173'], supports_credentials=True)
+
 # Initialize database
 db.init_app(app)
+
+# Register blueprints
+from database.auth import auth_bp  # noqa: E402
+app.register_blueprint(auth_bp)
 
 # In test environments (TESTING=true) create tables directly.
 # In all other cases, run 'flask --app migrate_app db upgrade' separately.
@@ -171,7 +180,7 @@ def _count_ip_running(ip: str) -> int:
         return sum(1 for v in _job_store.values() if v['ip'] == ip and v['status'] in ('queued', 'running'))
 
 
-def _run_live_scan_job(job_id: str, url: str):
+def _run_live_scan_job(job_id: str, url: str, user_id=None, anon_session_id=None):
     """Background worker: runs live scan, combines with ML score, saves to DB."""
     try:
         with _job_store_lock:
@@ -261,6 +270,8 @@ def _run_live_scan_job(job_id: str, url: str):
                 risk_score=risk_result['risk_score'],
                 model_version='url_lr_v1.0',
                 ioc_list=live_ioc_list,
+                user_id=user_id,
+                anon_session_id=anon_session_id,
             )
 
         result_payload = {
@@ -349,6 +360,12 @@ def api_scan_url():
             detection_result
         )
         
+        # Assign anon session id for guests
+        user_id = session.get('user_id')
+        if not user_id and 'anon_session_id' not in session:
+            session['anon_session_id'] = secrets.token_hex(32)
+        anon_id = session.get('anon_session_id') if not user_id else None
+
         # Save to database
         ioc_list = extract_iocs('URL', url, detection_result)
         ScanHistory.save_scan(
@@ -362,6 +379,8 @@ def api_scan_url():
             risk_score=risk_result['risk_score'],
             model_version='url_lr_v1.0',
             ioc_list=ioc_list,
+            user_id=user_id,
+            anon_session_id=anon_id,
         )
         
         return jsonify({
@@ -440,6 +459,13 @@ def api_scan_message():
         # Save to database (truncate message for storage)
         message_preview = message[:500] if len(message) > 500 else message
         ioc_list = extract_iocs('MESSAGE', message, detection_result)
+
+        # Assign anon session id for guests
+        user_id = session.get('user_id')
+        if not user_id and 'anon_session_id' not in session:
+            session['anon_session_id'] = secrets.token_hex(32)
+        anon_id = session.get('anon_session_id') if not user_id else None
+
         ScanHistory.save_scan(
             scan_type='MESSAGE',
             input_value=message_preview,
@@ -451,6 +477,8 @@ def api_scan_message():
             risk_score=risk_result['risk_score'],
             model_version='message_lr_v1.0',
             ioc_list=ioc_list,
+            user_id=user_id,
+            anon_session_id=anon_id,
         )
         
         return jsonify({
@@ -543,6 +571,13 @@ def api_scan_apk():
             apk_filename = file_info.get('filename', file.filename)
             ioc_list = extract_iocs('APK', apk_filename, detection_result,
                                      apk_file_path=file_path)
+
+            # Assign anon session id for guests
+            user_id = session.get('user_id')
+            if not user_id and 'anon_session_id' not in session:
+                session['anon_session_id'] = secrets.token_hex(32)
+            anon_id = session.get('anon_session_id') if not user_id else None
+
             ScanHistory.save_scan(
                 scan_type='APK',
                 input_value=apk_filename,
@@ -554,6 +589,8 @@ def api_scan_apk():
                 risk_score=risk_result['risk_score'],
                 model_version='apk_lr_v1.0',
                 ioc_list=ioc_list,
+                user_id=user_id,
+                anon_session_id=anon_id,
             )
             
             return jsonify({
@@ -618,7 +655,13 @@ def api_scan_url_live():
                 'ip': client_ip,
             }
 
-        _live_executor.submit(_run_live_scan_job, job_id, url)
+        # Capture ownership from session before passing to background thread
+        live_user_id = session.get('user_id')
+        if not live_user_id and 'anon_session_id' not in session:
+            session['anon_session_id'] = secrets.token_hex(32)
+        live_anon_id = session.get('anon_session_id') if not live_user_id else None
+
+        _live_executor.submit(_run_live_scan_job, job_id, url, live_user_id, live_anon_id)
 
         logger.info(f'Live scan job queued: {job_id} for {url[:80]}')
         return jsonify({'job_id': job_id, 'status': 'queued'}), 202
@@ -654,19 +697,32 @@ def api_health():
 
 @app.route('/api/history', methods=['GET'])
 def api_get_history():
-    """API endpoint to get scan history."""
+    """API endpoint to get scan history with ownership filtering."""
     try:
         limit = request.args.get('limit', 50, type=int)
         limit = min(limit, 100)  # Maximum 100 records
-        
-        scans = ScanHistory.get_recent_scans(limit=limit)
-        
+
+        user_id = session.get('user_id')
+        show_legacy = app.config.get('SHOW_LEGACY_TO_ALL', True)
+
+        if user_id:
+            # Signed-in user: see only their own scans
+            scans = ScanHistory.get_recent_scans(limit=limit, user_id=user_id)
+        else:
+            # Guest: see their anon session scans + legacy rows when enabled
+            anon_id = session.get('anon_session_id')
+            scans = ScanHistory.get_recent_scans(
+                limit=limit,
+                anon_session_id=anon_id,
+                show_legacy=show_legacy,
+            )
+
         return jsonify({
             'success': True,
             'count': len(scans),
             'scans': [scan.to_dict() for scan in scans]
         })
-        
+
     except Exception as e:
         logger.error(f"Error in history API: {str(e)}")
         return jsonify({
