@@ -111,6 +111,10 @@ def _decode_id_token(id_token: str) -> dict:
     if time.time() > exp:
         raise ValueError('Token has expired')
 
+    # Reject tokens for Google accounts whose email is not yet verified.
+    if not payload.get('email_verified'):
+        raise ValueError('Google account email is not verified')
+
     return payload
 
 

@@ -1,6 +1,7 @@
 """Configuration settings for SecureVision application."""
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 # Base directory
@@ -9,8 +10,9 @@ BASE_DIR = Path(__file__).parent.absolute()
 class Config:
     """Application configuration."""
 
-    # Flask settings
-    DEBUG = True
+    # Flask settings — read from env so SESSION_COOKIE_SECURE resolves correctly
+    # at startup rather than being hard-wired to False at class-parse time.
+    DEBUG = os.environ.get('DEBUG', 'false').lower() == 'true'
 
     # Database settings
     # DATABASE_URL env-var enables Postgres (or any other backend).
@@ -66,6 +68,8 @@ class Config:
     SESSION_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_SECURE   = not DEBUG        # False in dev, True when DEBUG=False
     SESSION_COOKIE_HTTPONLY = True
+    # Explicit lifetime — avoids relying on Flask's implicit 31-day default.
+    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
 
     # Feature flag: expose legacy scan rows (no owner) to all visitors
     SHOW_LEGACY_TO_ALL = os.environ.get('SHOW_LEGACY_TO_ALL', 'true').lower() == 'true'
