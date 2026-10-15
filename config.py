@@ -10,7 +10,6 @@ class Config:
     """Application configuration."""
 
     # Flask settings
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
     DEBUG = True
 
     # Database settings
@@ -62,8 +61,11 @@ class Config:
     GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', None)
     GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'http://localhost:5000/auth/google/callback')
 
-    # Override SECRET_KEY from env (stronger default check)
+    # Session / secret key
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-change-me')
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SECURE   = not DEBUG        # False in dev, True when DEBUG=False
+    SESSION_COOKIE_HTTPONLY = True
 
     # Feature flag: expose legacy scan rows (no owner) to all visitors
     SHOW_LEGACY_TO_ALL = os.environ.get('SHOW_LEGACY_TO_ALL', 'true').lower() == 'true'

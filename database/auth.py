@@ -12,7 +12,6 @@ route returns 501 and the app runs in guest-only mode.
 """
 from __future__ import annotations
 
-import hashlib
 import hmac
 import secrets
 import time
@@ -207,18 +206,24 @@ def google_callback():
 
 @auth_bp.route('/auth/logout', methods=['POST'])
 def logout():
-    """Clear the session. Validates Origin/Referer to prevent CSRF."""
-    host = request.host  # e.g. localhost:5000
-    origin  = request.headers.get('Origin',  '')
-    referer = request.headers.get('Referer', '')
+    """Clear the session. Validates Origin to prevent CSRF.
 
-    def _host_matches(header_val: str) -> bool:
-        parsed = urlparse(header_val)
-        return parsed.netloc == host or parsed.netloc == '' or not header_val
+    The origin's *hostname* must match the Flask server's hostname, or the
+    origin netloc must be ``localhost:5173`` (Vite dev server).  An explicit
+    hostname comparison is used so that a crafted origin like
+    ``http://localhost.evil.com`` cannot pass — its hostname is
+    ``localhost.evil.com``, not ``localhost``.
+    """
+    origin = request.headers.get('Origin', '')
 
-    if origin and not _host_matches(origin):
-        # Allow localhost:5173 (Vite dev) as well
-        if 'localhost' not in origin:
+    if origin:
+        origin_netloc  = urlparse(origin).netloc           # e.g. localhost:5000
+        origin_host    = origin_netloc.split(':')[0]       # e.g. localhost
+        server_host    = request.host.split(':')[0]        # e.g. localhost
+
+        # Allow requests from the same server hostname (any port) or the Vite
+        # dev server (localhost:5173).
+        if origin_host != server_host and origin_netloc != 'localhost:5173':
             return jsonify({'success': False, 'error': 'Forbidden'}), 403
 
     session.clear()

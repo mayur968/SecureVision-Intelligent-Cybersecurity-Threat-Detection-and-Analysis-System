@@ -67,9 +67,19 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Remove user_id and anon_session_id from scan_history ──────────────────
-    with op.batch_alter_table('scan_history', schema=None) as batch_op:
-        batch_op.drop_column('anon_session_id')
-        batch_op.drop_column('user_id')
+    conn = op.get_bind()
 
-    op.drop_table('users')
+    # Remove user_id and anon_session_id from scan_history (idempotent) ─────
+    has_user_id = _column_exists(conn, 'scan_history', 'user_id')
+    has_anon_id = _column_exists(conn, 'scan_history', 'anon_session_id')
+
+    if has_user_id or has_anon_id:
+        with op.batch_alter_table('scan_history', schema=None) as batch_op:
+            if has_anon_id:
+                batch_op.drop_column('anon_session_id')
+            if has_user_id:
+                batch_op.drop_column('user_id')
+
+    # Drop users table (idempotent) ─────────────────────────────────────────
+    if _table_exists(conn, 'users'):
+        op.drop_table('users')
