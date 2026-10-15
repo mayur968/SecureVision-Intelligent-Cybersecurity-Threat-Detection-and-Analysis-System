@@ -90,3 +90,14 @@ class Config:
         Config.UPLOAD_FOLDER.mkdir(exist_ok=True)
         Config.MODELS_DIR.mkdir(exist_ok=True)
         Config.DATA_DIR.mkdir(exist_ok=True)
+
+        # Guard against the well-known default SECRET_KEY being used in
+        # production.  A visible default value allows an attacker to forge
+        # signed Flask session cookies with arbitrary user_id values.
+        _debug = app.config.get('DEBUG', False)
+        _secret = app.config.get('SECRET_KEY', '')
+        if not _debug and _secret == 'dev-secret-change-me':
+            raise RuntimeError(
+                "SECRET_KEY must be set to a strong random value in production. "
+                "Set the SECRET_KEY environment variable before starting the app."
+            )

@@ -224,6 +224,30 @@ class TestLogout:
         assert resp.status_code == 200
         assert resp.get_json()['success'] is True
 
+    def test_logout_missing_origin_rejected(self, client, flask_app):
+        """POST /auth/logout with no Origin header → 403 (CSRF fail-closed)."""
+        user_id = _create_user(flask_app, google_sub='missing-origin-sub')
+        with client.session_transaction() as sess:
+            sess['user_id'] = user_id
+
+        # No Origin header — should be rejected, not silently succeed
+        resp = client.post('/auth/logout')
+        assert resp.status_code == 403
+        data = resp.get_json()
+        assert data['success'] is False
+
+    def test_logout_foreign_origin_rejected(self, client, flask_app):
+        """POST /auth/logout from a foreign origin → 403."""
+        user_id = _create_user(flask_app, google_sub='foreign-origin-sub')
+        with client.session_transaction() as sess:
+            sess['user_id'] = user_id
+
+        resp = client.post(
+            '/auth/logout',
+            headers={'Origin': 'http://evil.example.com'},
+        )
+        assert resp.status_code == 403
+
 
 class TestScanRoutes:
 
@@ -304,40 +328,60 @@ class TestHistoryOwnership:
 class TestMigration0003:
 
     def test_migration_0003_up_down_up(self, tmp_path):
-        """Run upgrade → downgrade → upgrade on a fresh SQLite DB."""
-        import subprocess, shutil
+        """Run upgrade → downgrade → upgrade on a fresh SQLite DB.
 
-        src = Path(__file__).parent.parent / 'securevision.db.bak2'
-        if not src.exists():
-            pytest.skip('No securevision.db.bak2 found; skipping migration round-trip test')
+        Creates a minimal pre-0003 database inline so the test is not
+        dependent on a committed backup file and always executes in CI.
+        """
+        import subprocess, shutil, sqlite3
 
-        test_db = tmp_path / 'test_migrate.db'
-        shutil.copy(src, test_db)
-        db_url = f'sqlite:///{test_db.as_posix()}'
-        env = {**os.environ, 'DATABASE_URL': db_url, 'TESTING': '', 'SKIP_VENV_CHECK': '1'}
         python = str(Path(__file__).parent.parent / 'venv' / 'Scripts' / 'python.exe')
         base = str(Path(__file__).parent.parent)
+        test_db = tmp_path / 'test_migrate.db'
+        db_url = f'sqlite:///{test_db.as_posix()}'
+        env = {**os.environ, 'DATABASE_URL': db_url, 'TESTING': '', 'SKIP_VENV_CHECK': '1'}
 
         def _run(*args):
             r = subprocess.run(
                 [python, '-m', 'flask', '--app', 'migrate_app', 'db'] + list(args),
                 cwd=base, env=env, capture_output=True, text=True
             )
-            return r.returncode
+            return r.returncode, r.stdout, r.stderr
 
-        assert _run('upgrade') == 0 or True  # already at head → ignore non-zero
-        assert _run('downgrade', '0002_phase1_unified_schema') == 0
+        # Bring DB up to revision 0002 first (pre-0003 baseline).
+        rc, out, err = _run('upgrade', '0002_phase1_unified_schema')
+        assert rc == 0, f"upgrade to 0002 failed:\nSTDOUT:\n{out}\nSTDERR:\n{err}"
 
-        # After downgrade, users table should be gone
-        import sqlite3
+        # Upgrade to 0003 (the migration under test).
+        rc, out, err = _run('upgrade')
+        assert rc == 0, f"upgrade to 0003 failed:\nSTDOUT:\n{out}\nSTDERR:\n{err}"
+
+        # Verify columns exist after upgrade.
         conn = sqlite3.connect(str(test_db))
         tables = [r[0] for r in conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table'"
         ).fetchall()]
-        assert 'users' not in tables
+        sh_cols = [r[1] for r in conn.execute('PRAGMA table_info(scan_history)').fetchall()]
         conn.close()
 
-        assert _run('upgrade') == 0
+        assert 'users' in tables, "users table missing after upgrade"
+        assert 'user_id' in sh_cols, "user_id column missing after upgrade"
+        assert 'anon_session_id' in sh_cols, "anon_session_id column missing after upgrade"
+
+        # Downgrade back to 0002 — users table should disappear.
+        rc, out, err = _run('downgrade', '0002_phase1_unified_schema')
+        assert rc == 0, f"downgrade failed:\nSTDOUT:\n{out}\nSTDERR:\n{err}"
+
+        conn = sqlite3.connect(str(test_db))
+        tables = [r[0] for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()]
+        conn.close()
+        assert 'users' not in tables, "users table still present after downgrade"
+
+        # Upgrade again to confirm idempotency of the migration.
+        rc, out, err = _run('upgrade')
+        assert rc == 0, f"second upgrade failed:\nSTDOUT:\n{out}\nSTDERR:\n{err}"
 
         conn = sqlite3.connect(str(test_db))
         tables = [r[0] for r in conn.execute(

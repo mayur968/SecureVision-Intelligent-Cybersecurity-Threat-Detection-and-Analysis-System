@@ -97,6 +97,11 @@ def run_migrations_online():
     connectable = get_engine()
 
     with connectable.connect() as connection:
+        # Ensure render_as_batch is set for every invocation path — not just
+        # when Flask-Migrate injects it via conf_args.  A direct
+        # `alembic upgrade head` would otherwise skip batch mode and fail on
+        # SQLite when adding constrained columns (migration 0003+).
+        conf_args.setdefault('render_as_batch', True)
         context.configure(
             connection=connection,
             target_metadata=get_metadata(),

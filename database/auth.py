@@ -220,15 +220,20 @@ def logout():
     """
     origin = request.headers.get('Origin', '')
 
-    if origin:
-        origin_netloc  = urlparse(origin).netloc           # e.g. localhost:5000
-        origin_host    = origin_netloc.split(':')[0]       # e.g. localhost
-        server_host    = request.host.split(':')[0]        # e.g. localhost
+    # Require an Origin header — a missing Origin skips no check; it is a
+    # rejection.  SameSite=Lax alone is not sufficient because same-origin
+    # requests and non-browser clients may omit the header.
+    if not origin:
+        return jsonify({'success': False, 'error': 'Forbidden'}), 403
 
-        # Allow requests from the same server hostname (any port) or the Vite
-        # dev server (localhost:5173).
-        if origin_host != server_host and origin_netloc != 'localhost:5173':
-            return jsonify({'success': False, 'error': 'Forbidden'}), 403
+    origin_netloc  = urlparse(origin).netloc           # e.g. localhost:5000
+    origin_host    = origin_netloc.split(':')[0]       # e.g. localhost
+    server_host    = request.host.split(':')[0]        # e.g. localhost
+
+    # Allow requests from the same server hostname (any port) or the Vite
+    # dev server (localhost:5173).
+    if origin_host != server_host and origin_netloc != 'localhost:5173':
+        return jsonify({'success': False, 'error': 'Forbidden'}), 403
 
     session.clear()
     return jsonify({'success': True})
