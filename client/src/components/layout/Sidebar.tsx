@@ -45,7 +45,7 @@ const Icon = {
 };
 
 const NAV_ITEMS = [
-  { to: '/',             icon: Icon.Dashboard, label: 'Dashboard'       },
+  { to: '/dashboard',    icon: Icon.Dashboard, label: 'Dashboard'       },
   { to: '/scan/url',     icon: Icon.Url,       label: 'URL Scanner'     },
   { to: '/scan/message', icon: Icon.Message,   label: 'Message Scanner' },
   { to: '/scan/apk',     icon: Icon.Apk,       label: 'APK Scanner'     },
@@ -72,7 +72,7 @@ export default function Sidebar() {
             <li key={to}>
               <NavLink
                 to={to}
-                end={to === '/'}
+                end={to === '/dashboard'}
                 className={({ isActive }) =>
                   `group flex items-center gap-2.5 rounded px-2.5 py-2 text-sm font-medium transition-all duration-100 ${
                     isActive
