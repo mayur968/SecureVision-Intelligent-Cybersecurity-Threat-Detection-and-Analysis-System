@@ -33,7 +33,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Routes>
             {/* Public full-page routes (no sidebar layout) */}
             <Route path="/"     element={<Landing />} />
-            <Route path="login" element={<Login />} />
+            <Route path="/login" element={<Login />} />
 
             {/* App routes inside the sidebar Layout */}
             <Route element={<Layout />}>

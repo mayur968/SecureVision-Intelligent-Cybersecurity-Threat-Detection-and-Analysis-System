@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '../api/client.js';
@@ -149,8 +149,6 @@ function verdictChipClass(prediction: string): string {
 export default function Landing() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [quickUrl, setQuickUrl]     = useState('');
-
-  const navigate = useNavigate();
 
   const scanMutation = useMutation<ScanResult, Error, string>({
     mutationFn: (url: string) => api.scanUrl(url),
