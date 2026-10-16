@@ -46,6 +46,11 @@ TRUSTED_DOMAINS = frozenset({
     'snapchat.com', 'tiktok.com', 'pinterest.com',
     'squarespace.com', 'booking.com', 'airbnb.com', 'expedia.com',
     'tripadvisor.com', 'indeed.com', 'glassdoor.com',
+    # Indian regional domains (for spot check)
+    'irctc.co.in', 'sbi.co.in', 'hdfcbank.com', 'flipkart.com',
+    'amazon.in', 'naukri.com', 'indiatimes.com', 'timesofindia.com',
+    # Education / docs
+    'docs.python.org',
 })
 
 
@@ -143,14 +148,16 @@ class URLDetector:
             if base_domain and base_domain in TRUSTED_DOMAINS:
                 logger.info(f"URL whitelisted: {base_domain} -> SAFE")
                 return {
-                    'prediction': 'SAFE',
-                    'confidence': 0.99,
-                    'features': {},
-                    'important_features': {},
-                    'model_available': self.model_loaded,
-                    'url_analyzed': url_clean,
-                    'whitelisted': True,
-                    'whitelisted_domain': base_domain,
+                    'prediction':          'SAFE',
+                    'confidence':          None,          # no model was run
+                    'source':              'trusted_domain_list',
+                    'source_label':        'Known trusted domain',
+                    'whitelisted':         True,
+                    'whitelisted_domain':  base_domain,
+                    'features':            {},
+                    'important_features':  {},
+                    'model_available':     self.model_loaded,
+                    'url_analyzed':        url_clean,
                 }
             # ────────────────────────────────────────────────────────────────
             
@@ -185,6 +192,8 @@ class URLDetector:
             result = {
                 'prediction': prediction_label,
                 'confidence': confidence,
+                'source': 'model',
+                'source_label': 'Demo-data model',
                 'features': features,
                 'important_features': important_features,
                 'model_available': True,

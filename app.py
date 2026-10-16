@@ -336,10 +336,11 @@ def api_scan_url():
                 'error': detection_result['error']
             }), 500
         
-        # Calculate risk
+        # Calculate risk — confidence may be None for whitelist hits
+        scan_confidence = detection_result['confidence']
         risk_result = risk_scorer.calculate_risk_score(
             detection_result['prediction'],
-            detection_result['confidence'],
+            scan_confidence if scan_confidence is not None else 0.99,
             'URL',
             detection_result
         )
@@ -347,7 +348,7 @@ def api_scan_url():
         # Generate explanation
         explanation = threat_explainer.explain(
             detection_result['prediction'],
-            detection_result['confidence'],
+            scan_confidence if scan_confidence is not None else 0.99,
             'URL',
             detection_result
         )
@@ -372,7 +373,7 @@ def api_scan_url():
             scan_type='URL',
             input_value=url,
             prediction=detection_result['prediction'],
-            confidence=detection_result['confidence'],
+            confidence=scan_confidence if scan_confidence is not None else 0.99,
             risk_level=risk_result['risk_level'],
             explanation=explanation,
             recommendation='\n'.join(recommendations),
@@ -386,7 +387,9 @@ def api_scan_url():
         return jsonify({
             'success': True,
             'prediction': detection_result['prediction'],
-            'confidence': round(detection_result['confidence'], 4),
+            'confidence': round(scan_confidence, 4) if scan_confidence is not None else None,
+            'source': detection_result.get('source', 'model'),
+            'source_label': detection_result.get('source_label', 'Demo-data model'),
             'risk_score': risk_result['risk_score'],
             'risk_level': risk_result['risk_level'],
             'explanation': explanation,

@@ -1,0 +1,31 @@
+url,expected_label,notes
+https://www.google.com,SAFE,Major search engine
+https://www.amazon.in,SAFE,Indian e-commerce - regional
+https://www.irctc.co.in,SAFE,Indian Railways booking - regional ccTLD
+https://www.sbi.co.in,SAFE,State Bank of India - ccTLD
+https://www.hdfcbank.com,SAFE,HDFC Bank India
+https://www.flipkart.com,SAFE,Indian e-commerce
+https://www.vit.ac.in,SAFE,VIT University - .ac.in college site
+https://docs.python.org/3/library/email.html,SAFE,Python official docs
+https://stackoverflow.com/questions/tagged/python,SAFE,Developer Q&A
+https://www.github.com,SAFE,Code hosting
+https://www.wikipedia.org,SAFE,Encyclopedia
+https://www.bbc.com/news,SAFE,News outlet
+https://www.mozilla.org/en-US/firefox,SAFE,Browser vendor
+https://www.w3.org/TR/html5,SAFE,Standards body
+https://www.coursera.org/learn/python,SAFE,Online learning
+http://paypa1-secure-login.tk/verify/account,PHISHING,Typosquat + risky TLD + path keywords
+http://amaz0n-account-update.net/login,PHISHING,Typosquat + path keywords
+http://microsoft-security-alert.xyz/update-required,PHISHING,Brand spoof + risky TLD + path
+http://192.168.1.100/login/verify,PHISHING,Private IP host + path keywords
+http://secure-banking-login-verify.tk/account,PHISHING,Risky TLD + multiple keywords
+http://apple-id-verify-suspended.gq/signin,PHISHING,Free TLD + brand + keywords
+http://bit.ly/3xYzAbC,PHISHING,URL shortener (suspicious context)
+http://paypal.com.secure-update.net/verify,PHISHING,Brand in subdomain + different registrable
+http://login.chase-security-alert.com/verify,PHISHING,Brand in subdomain + keywords
+http://accounts.google.com.verify-id.tk/login,PHISHING,Brand in subdomain + free TLD
+http://update-facebook-account-now.xyz/login,PHISHING,No real brand + keywords + risky TLD
+http://123.45.67.89/bank/login,PHISHING,Numeric IP + path keywords
+http://ebay-suspended-account.ml/recover,PHISHING,Brand spoof + free TLD
+http://urgent-wire-transfer.cf/confirm,PHISHING,Financial keyword + free TLD
+http://covid-relief-fund-claim.top/apply,PHISHING,Social-engineering + risky TLD

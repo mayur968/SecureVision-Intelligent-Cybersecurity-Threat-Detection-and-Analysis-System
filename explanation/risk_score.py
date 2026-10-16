@@ -23,28 +23,39 @@ class RiskScorer:
     ) -> Dict:
         """
         Calculate risk score based on prediction and features.
-        
-        Args:
-            prediction: Prediction label (SAFE, PHISHING, MALICIOUS, etc.)
-            confidence: Model confidence (0.0 to 1.0)
-            scan_type: Type of scan (URL, MESSAGE, APK)
-            features: Additional features that may affect risk
-            
-        Returns:
-            Dictionary with risk_score (0-100) and risk_level (LOW/MEDIUM/HIGH)
+
+        Invariant: the risk_level returned always agrees with the prediction.
+          SAFE       → LOW   (0–39)
+          PHISHING / MALICIOUS → HIGH (70–100)
+          SUSPICIOUS → MEDIUM (40–69)
+
+        The confidence and feature adjustments add nuance *within* the band;
+        they can never push the score outside the prediction's band.
         """
-        # Base score from prediction
-        if prediction in ['SAFE']:
-            base_score = 10  # Low base risk for safe predictions
-        elif prediction in ['PHISHING', 'MALICIOUS']:
-            base_score = 70  # High base risk for threats
+        # ── Band boundaries ──────────────────────────────────────────────────
+        #  Prediction   band      base   max adjustment
+        #  SAFE         LOW       10     +29  → 0–39
+        #  SUSPICIOUS   MEDIUM    40     +29  → 40–69
+        #  PHISHING/MALICIOUS HIGH 70   +30  → 70–100
+        #  UNKNOWN/ERROR  MEDIUM  50     ±0   → 50
+        if prediction == 'SAFE':
+            band_min, band_max = 0, 39
+            base_score = 10
+        elif prediction in ('PHISHING', 'MALICIOUS'):
+            band_min, band_max = 70, 100
+            base_score = 70
+        elif prediction == 'SUSPICIOUS':
+            band_min, band_max = 40, 69
+            base_score = 40
         else:
-            base_score = 50  # Unknown/error state
-        
-        # Adjust by confidence
+            # UNKNOWN / ERROR — no band enforcement, neutral
+            band_min, band_max = 0, 100
+            base_score = 50
+
+        # Confidence nudge (0–30 points, proportional to certainty)
         confidence_adjusted = base_score + (confidence * 30)
-        
-        # Additional adjustments based on scan type and features
+
+        # Feature adjustments
         if features:
             if scan_type == 'URL':
                 confidence_adjusted = self._adjust_url_risk(confidence_adjusted, features)
@@ -52,21 +63,30 @@ class RiskScorer:
                 confidence_adjusted = self._adjust_message_risk(confidence_adjusted, features)
             elif scan_type == 'APK':
                 confidence_adjusted = self._adjust_apk_risk(confidence_adjusted, features)
-        
-        # Ensure score is in valid range
-        final_score = int(max(0, min(100, confidence_adjusted)))
-        
-        # Determine risk level
-        if final_score < self.LOW_THRESHOLD:
+
+        # Clamp to the prediction's band first, then to absolute 0-100
+        final_score = int(max(band_min, min(band_max, confidence_adjusted)))
+        final_score = max(0, min(100, final_score))
+
+        # Derive risk_level directly from prediction so they always agree
+        if prediction == 'SAFE':
             risk_level = 'LOW'
-        elif final_score < self.MEDIUM_THRESHOLD:
+        elif prediction in ('PHISHING', 'MALICIOUS'):
+            risk_level = 'HIGH'
+        elif prediction == 'SUSPICIOUS':
             risk_level = 'MEDIUM'
         else:
-            risk_level = 'HIGH'
-        
+            # Fallback for UNKNOWN/ERROR — use score thresholds
+            if final_score < self.LOW_THRESHOLD:
+                risk_level = 'LOW'
+            elif final_score < self.MEDIUM_THRESHOLD:
+                risk_level = 'MEDIUM'
+            else:
+                risk_level = 'HIGH'
+
         return {
             'risk_score': final_score,
-            'risk_level': risk_level
+            'risk_level': risk_level,
         }
     
     def _adjust_url_risk(self, base_score: float, features: Dict) -> float:

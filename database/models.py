@@ -402,12 +402,14 @@ def seed_model_registry() -> None:
             'detector_type':    'url',
             'version':          'v1.0',
             'pkl_path':         'models/url_model.pkl',
-            'dataset_name':     'Synthetic URL dataset (100 samples)',
-            'dataset_size':     100,
+            'dataset_name':     'Synthetic URL dataset (197 samples)',
+            'dataset_size':     197,
             'notes':            (
-                'Trained on 100-sample synthetic dataset (50 benign / 50 phishing). '
-                'is_synthetic_data=True. Metrics not yet evaluated on a real held-out set. '
-                'Feature extractor: 43 lexical + WHOIS + typosquatting features.'
+                'RandomForestClassifier trained on 197-row synthetic URL dataset '
+                '(~100 safe / ~97 phishing). '
+                'is_synthetic_data=True. Metrics not evaluated on a real held-out set. '
+                '43 lexical + WHOIS + typosquatting features. '
+                'Whitelist guard bypasses model for top-100 trusted domains.'
             ),
         },
         {
@@ -418,9 +420,10 @@ def seed_model_registry() -> None:
             'dataset_name':     'Demo message corpus (99 samples)',
             'dataset_size':     99,
             'notes':            (
-                'Trained on 99-sample demo corpus (40 safe / 59 phishing). '
-                'is_synthetic_data=True. Metrics not yet evaluated on a real held-out set. '
-                'TF-IDF vectorizer (1000 features, unigrams+bigrams) + Logistic Regression.'
+                'LogisticRegression trained on 99-row demo message corpus '
+                '(~40 safe / ~59 phishing). '
+                'is_synthetic_data=True. Metrics not evaluated on a real held-out set. '
+                'TF-IDF vectorizer (1000 features, unigrams+bigrams), 110 input features.'
             ),
         },
         {
@@ -428,12 +431,14 @@ def seed_model_registry() -> None:
             'detector_type':    'apk',
             'version':          'v1.0',
             'pkl_path':         'models/apk_model.pkl',
-            'dataset_name':     'Synthetic APK feature dataset (400 samples)',
-            'dataset_size':     400,
+            'dataset_name':     'Synthetic APK feature dataset (50 samples)',
+            'dataset_size':     50,
             'notes':            (
-                'Trained on 400-sample synthetic APK feature dataset (200 benign / 200 malicious). '
-                'is_synthetic_data=True. Metrics not yet evaluated on a real held-out set. '
-                'Pipeline: StandardScaler + Logistic Regression, 44 static-analysis features.'
+                'LogisticRegression trained on 50-row synthetic APK feature dataset '
+                '(25 benign / 25 malicious). '
+                'is_synthetic_data=True. Metrics not evaluated on a real held-out set. '
+                '44 static-analysis features (permissions, DEX count, components). '
+                'No dynamic execution or code analysis.'
             ),
         },
     ]
