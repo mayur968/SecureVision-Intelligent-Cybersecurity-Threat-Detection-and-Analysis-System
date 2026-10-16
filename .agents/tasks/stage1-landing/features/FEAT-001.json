@@ -1,0 +1,46 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Landing page, route restructure, AuthContext skeleton, Login placeholder, Vite /auth proxy, Sidebar dashboard link fix. Single coherent unit — all changes are additive to existing pages.",
+  "status": "completed",
+  "steps": [
+    "1. Create client/src/context/AuthContext.tsx. Export type User = null (Stage 2 will expand). Export AuthProvider (React context provider returning {user: null, loading: false}) and useAuth() hook. No external deps.",
+
+    "2. Create client/src/pages/Login.tsx. Full-page dark layout (bg-surface-base, no sidebar). Import logo from '../assets/logo.svg'. Show logo, h1 'Sign In', and a notice card: 'Authentication coming in Stage 2.' with a link 'Continue as guest →' pointing to /dashboard via react-router-dom Link. No broken imports.",
+
+    "3. Create client/src/pages/Landing.tsx. Full implementation of 7 sections described below. Import logo from '../assets/logo.svg'. Use framer-motion (already installed, v11). Use useMutation from @tanstack/react-query and api.scanUrl for quick-scan strip. Use Link and useNavigate from react-router-dom for CTAs.\n\n   SECTION A — Sticky nav: `sticky top-0 z-50 backdrop-blur-md bg-surface-raised/80 border-b border-surface-border`. Logo (img + 'SecureVision' text). Nav links: 'Features' (onClick scrolls #features via document.getElementById('features')?.scrollIntoView({behavior:'smooth'})), 'How it works' (scrolls #how-it-works), 'Open App' button (btn-primary, Link to /dashboard), 'Sign in' (Link to /login, text-accent). Mobile hamburger: useState<boolean>(false) controls a div with mobile nav links that appear below the bar.\n\n   SECTION B — Hero: motion.div initial={opacity:0,y:20} animate={opacity:1,y:0} transition={duration:0.6}. h1 'Detect threats before they reach you' (text-4xl lg:text-5xl font-bold text-content-primary). Sub-text 'AI-powered phishing, malware, and email threat detection — no account required.' (text-content-secondary). Two buttons: 'Open Dashboard' (btn-primary Link to /dashboard) and 'Try URL Scanner' (btn-ghost Link to /scan/url).\n\n   SECTION C — Quick-scan strip: Label 'Instant URL check — no account needed' (section-label). form onSubmit calls mutation. input (input class) placeholder 'https://example.com'. 'Scan' button (btn-primary, disabled while loading). States: idle=placeholder text in result area, loading=spinner (animate-spin border-2 border-accent-glow border-t-transparent rounded-full inline-block), result=chip with prediction text and confidence% (bg-sev-low text-surface-base for SAFE, bg-sev-critical text-white for PHISHING/MALICIOUS, bg-sev-medium for others), error=text-sev-critical error string.\n\n   SECTION D — Feature cards (id='features'): h2 'Features'. motion container with variants={container:{hidden:{},show:{transition:{staggerChildren:0.08}}}} and children variants={item:{hidden:{opacity:0,y:16},show:{opacity:1,y:0}}}. Use motion.div(whileInView) so cards animate as user scrolls. Grid: grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4. Six card divs (card class) each with: inline SVG icon (same style as Sidebar.tsx icons, 20x20, stroke currentColor), h3 title, p description. Cards: (1) URL Scanner - link SVG - 'Detect phishing and malicious URLs with ML + rule-based analysis'; (2) Live Scan - wifi SVG - 'Browser-based live page analysis with screenshot and redirect chain'; (3) Message & Email Scanner - message SVG - 'Analyse SMS, chat, and email text for phishing indicators'; (4) APK Static Analysis - package SVG - 'Inspect Android APKs for permissions, certificates, and malicious patterns'; (5) Explainable Results - lightbulb SVG - 'Every verdict comes with feature-level explanation and actionable recommendations'; (6) Scan History - clock SVG - 'Full history of your scans with risk trends and statistics'.\n\n   SECTION E — How it works (id='how-it-works'): h2 'How it works'. flex flex-wrap gap-4 items-center justify-center. 4 steps, each: div with number circle (h-8 w-8 rounded-full bg-accent flex items-center justify-center text-white font-bold text-sm), h3 step title, p step description. Between steps: SVG arrow (hidden on mobile, visible md:block). Steps: 1 'Submit' 'Paste a URL, message, or upload an APK file'; 2 'Extract Features' 'Domain age, redirects, lexical patterns, and more are extracted'; 3 'ML + Rules' 'A trained logistic-regression model and rule engine score the input'; 4 'Explanation & Recommendations' 'Verdict, confidence score, and specific indicators are returned'.\n\n   SECTION F — Privacy & Safety: h2 'Privacy & Safety'. Three items each with a lock SVG icon (inline, 16x16) and text as specified.\n\n   SECTION G — Footer: footer element. Three links: About href='#features', Models href='https://scikit-learn.org', GitHub href='https://github.com/mayur968/SecureVision-Intelligent-Cybersecurity-Threat-Detection-and-Analysis-System'. Copyright line: '© 2024 SecureVision'. All links: text-content-secondary hover:text-accent-glow transition-colors.",
+
+    "4. Edit client/src/main.tsx. Wrap entire app in AuthProvider from ./context/AuthContext.js. New route tree: two routes OUTSIDE Layout — path '/' element=<Landing>, path 'login' element=<Login>. One parent Route element=<Layout> containing children: path 'dashboard' element=<Dashboard>, path 'scan/url' element=<UrlScanner>, path 'scan/message' element=<MessageScanner>, path 'scan/apk' element=<ApkScanner>, path 'history' element=<History>, path 'dashboard-legacy' element=<Navigate to='/dashboard' replace/>. Catch-all '*' element=<Navigate to='/' replace /> OUTSIDE Layout. Remove the old index route for Dashboard. Add ErrorBoundary wrappers to all inner pages same as before.",
+
+    "5. Edit client/vite.config.ts. Add '/auth' proxy entry alongside existing '/api': `'/auth': { target: 'http://localhost:5000', changeOrigin: true, secure: false }`. No other changes.",
+
+    "6. Edit client/src/components/layout/Sidebar.tsx. Change the Dashboard NAV_ITEM's `to` from `'/'` to `'/dashboard'`. The `end` prop is already `true` for that entry — keep it. This fixes active-link highlighting now that '/' is the landing page.",
+
+    "7. Run `cd c:\\Users\\Mayur\\Documents\\SecureVision\\client && npx tsc --noEmit`. Fix any TypeScript errors before proceeding.",
+
+    "8. Write and run a Playwright smoke test script (ad-hoc .mjs file in client/, deleted after). Test: (a) http://localhost:5173/ loads, h1 contains 'Detect threats', no console errors; (b) fill quick-scan URL input with 'https://www.google.com', submit, wait up to 15s for verdict chip; (c) click 'Open Dashboard' and assert URL ends with '/dashboard'; (d) navigate to http://localhost:5173/dashboard and assert it loads; (e) navigate to http://localhost:5173/login and assert it loads. Take screenshot of landing page to c:\\Users\\Mayur\\Documents\\SecureVision\\.agents\\tasks\\stage1_landing.png.",
+
+    "9. Write c:\\Users\\Mayur\\Documents\\SecureVision\\.agents\\tasks\\stage1_complete.md with: summary of what was built, list of created/modified files, tsc output, Playwright pass counts, any spec deviations.",
+
+    "10. Set FEAT-001 status to 'completed' in c:\\Users\\Mayur\\Documents\\SecureVision\\.agents\\tasks\\stage1-landing\\features\\FEAT-001.json and record findings.",
+
+    "11. Git commit: `git add client/src/context/AuthContext.tsx client/src/pages/Landing.tsx client/src/pages/Login.tsx client/src/main.tsx client/vite.config.ts client/src/components/layout/Sidebar.tsx && git commit -m 'feat: Stage 1 — landing page, /dashboard route'`"
+  ],
+  "acceptance_criteria": [
+    "npx tsc --noEmit exits 0 with no errors",
+    "GET http://localhost:5173/ returns the landing page — h1 'Detect threats before they reach you' is visible",
+    "Quick-scan strip on the landing page calls POST /api/scan/url and displays a verdict chip (SAFE or PHISHING) within 15 seconds",
+    "Clicking 'Open Dashboard' on the landing page navigates to /dashboard and the existing dashboard still renders correctly",
+    "GET http://localhost:5173/login loads without 404 or console errors",
+    "GET http://localhost:5173/scan/url, /scan/message, /scan/apk, /history all still load inside Layout with sidebar visible",
+    "No fake statistics on the landing page (no call to /api/statistics)",
+    "Logo displays correctly using the imported SVG asset",
+    "Git commit exists with message 'feat: Stage 1 — landing page, /dashboard route'"
+  ],
+  "verification": [
+    "cd c:\\Users\\Mayur\\Documents\\SecureVision\\client && npx tsc --noEmit",
+    "Playwright smoke tests pass (all 5 assertions described in step 8)"
+  ],
+  "blocked_reason": null,
+  "findings": "tsc --noEmit: exit 0, no errors. Playwright smoke tests: 8/8 passed (landing h1, no console errors, quick-scan verdict chip SAFE for google.com, Open Dashboard → /dashboard, dashboard renders, /login loads with no console errors). Screenshot saved to .agents/tasks/stage1_landing.png. No spec deviations."
+}

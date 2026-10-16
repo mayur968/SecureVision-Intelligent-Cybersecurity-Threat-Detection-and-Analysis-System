@@ -1,0 +1,7 @@
+{
+  "task_id": "stage1-landing",
+  "task_description": "Add a public landing page at '/', move existing dashboard to '/dashboard', add skeleton AuthContext and Login page, add /auth proxy in Vite config. All existing routes and API shapes unchanged.",
+  "status": "pending",
+  "feature_order": ["FEAT-001"],
+  "blocked_reason": null
+}

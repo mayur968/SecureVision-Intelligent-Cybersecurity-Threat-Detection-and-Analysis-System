@@ -1,0 +1,28 @@
+{
+  "project_type": "React 18 SPA (Vite) + Flask 3 API, TypeScript, Tailwind CSS v3",
+  "language": "TypeScript (frontend), Python (backend)",
+  "build_system": "Vite 5 (client), Flask dev server (backend). Client: `npm run build` = `tsc && vite build`. Dev: `npm run dev` on :5173 proxying /api and /auth to Flask :5000.",
+  "test_framework": "Playwright 1.64 (devDependency in client/package.json). No pytest configured for frontend. Backend uses pytest (venv). tsc --noEmit for type checking.",
+  "build_command": "cd c:\\Users\\Mayur\\Documents\\SecureVision\\client && npx tsc --noEmit",
+  "test_command": "cd c:\\Users\\Mayur\\Documents\\SecureVision\\client && npx tsc --noEmit (type check). Playwright: write ad-hoc script in client/, run with node, delete after.",
+  "verification_instructions": "1. Run `cd c:\\Users\\Mayur\\Documents\\SecureVision\\client && npx tsc --noEmit` — must exit 0. 2. With Flask on :5000 and Vite on :5173, run Playwright smoke tests verifying landing page, quick scan verdict, /dashboard navigation, /login load.",
+  "snapshot_or_generated_files": null,
+  "environment_constraints": "Do NOT restart or kill running servers. Use project venv: c:\\Users\\Mayur\\Documents\\SecureVision\\venv\\Scripts\\python.exe. Vite dev server is expected to be on :5173 (strictPort:false so it may shift up). Flask on :5000.",
+  "contribution_requirements": "Never commit secrets. All new env vars go in .env.example as placeholders. App must run in guest mode when Google env vars are absent.",
+  "key_patterns": "Components import logo from '../../assets/logo.svg' (NOT /public). All pages inside Layout use Outlet pattern. Inline SVG icons (no icon library). framer-motion v11 used on Dashboard and UrlScanner pages (motion.div, AnimatePresence, useMutation from @tanstack/react-query). Tailwind classes use custom tokens: surface.{base,raised,overlay,border,muted}, accent.{DEFAULT,hover,glow,subtle}, sev.{critical,high,medium,low}, content.{primary,secondary,muted,disabled}. Component classes: card, btn-primary, btn-ghost, input, chip, section-label. Routes use .js extension in imports (Vite ESM convention).",
+  "relevant_files": [
+    "client/src/main.tsx",
+    "client/src/components/layout/Sidebar.tsx",
+    "client/src/components/layout/Layout.tsx",
+    "client/src/pages/Dashboard.tsx",
+    "client/src/pages/UrlScanner.tsx",
+    "client/src/api/client.ts",
+    "client/src/types/index.ts",
+    "client/src/index.css",
+    "client/tailwind.config.ts",
+    "client/vite.config.ts",
+    "client/src/assets/logo.svg",
+    "app.py"
+  ],
+  "directory_structure": "SecureVision/ — Flask app root (app.py, config.py, detection/, database/, utils/). client/ — Vite React app. client/src/pages/ — Dashboard.tsx, UrlScanner.tsx, MessageScanner.tsx, ApkScanner.tsx, History.tsx. client/src/components/layout/ — Layout.tsx, Sidebar.tsx. client/src/components/ui/ — ScanResultCard, ConfidenceBar, ExplanationPanel, RecommendationList, ErrorBoundary. client/src/api/client.ts — axios wrapper. client/src/assets/logo.svg — project logo. client/public/ — static assets (logo.svg copy). .agents/tasks/ — artifact and log directory."
+}

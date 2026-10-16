@@ -1,5 +1,26 @@
 {
-  "verdict": "APPROVED",
-  "findings": [],
-  "reviewDoc": null
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    {
+      "severity": "MEDIUM",
+      "label": "_safe_redirect_url open-redirect guard is untested",
+      "detail": "No test exercises next=//evil.com, next=https://evil.com, or a valid local path through the login/callback flow. A regression in the guard would re-open open-redirect silently. Add unit tests for _safe_redirect_url directly, covering the reject-//host, reject-full-URL, and accept-local-path cases."
+    },
+    {
+      "severity": "LOW",
+      "label": "SESSION_COOKIE_SECURE comment is misleading",
+      "detail": "The config comment claims the value is resolved at startup; it actually resolves at class-definition (import) time. No functional bug in the current single-class pattern, but it is a latent trap for subclasses. Correct the comment or move the assignment into init_app."
+    },
+    {
+      "severity": "LOW",
+      "label": "handleSignOut silently swallows 403 from CSRF guard",
+      "detail": "The try/catch in Layout.tsx is intentionally best-effort, but it means a 403 (e.g. from a non-browser client omitting Origin) causes refetch() to run and the UI to show as signed-out while the server session persists. Document the Origin requirement in the API contract."
+    },
+    {
+      "severity": "LOW",
+      "label": "_safe_redirect_url not exercised through the full callback flow",
+      "detail": "The oauth_next → redirect path in google_callback is never tested end-to-end. A test that mocks _exchange_code_for_tokens and _decode_id_token and verifies the post-login redirect target would close this gap."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\Mayur\\Documents\\SecureVision\\.agents\\tasks\\stage2_review.md"
 }
