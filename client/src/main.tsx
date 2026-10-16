@@ -12,6 +12,7 @@ import Dashboard          from './pages/Dashboard.js';
 import UrlScanner         from './pages/UrlScanner.js';
 import MessageScanner     from './pages/MessageScanner.js';
 import ApkScanner         from './pages/ApkScanner.js';
+import EmailScanner       from './pages/EmailScanner.js';
 import History            from './pages/History.js';
 import ErrorBoundary      from './components/ui/ErrorBoundary.js';
 
@@ -41,6 +42,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="scan/url"           element={<ErrorBoundary><UrlScanner /></ErrorBoundary>} />
               <Route path="scan/message"       element={<ErrorBoundary><MessageScanner /></ErrorBoundary>} />
               <Route path="scan/apk"           element={<ErrorBoundary><ApkScanner /></ErrorBoundary>} />
+              <Route path="scan/email"         element={<ErrorBoundary><EmailScanner /></ErrorBoundary>} />
               <Route path="history"            element={<ErrorBoundary><History /></ErrorBoundary>} />
               {/* Legacy redirect so old bookmarks still work */}
               <Route path="dashboard-legacy"   element={<Navigate to="/dashboard" replace />} />

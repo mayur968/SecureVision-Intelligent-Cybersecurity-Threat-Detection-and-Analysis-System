@@ -48,7 +48,7 @@ export interface Statistics {
 }
 
 export type LiveScanVerdict = 'PHISHING' | 'SUSPICIOUS' | 'LIKELY_SAFE' | 'COULD_NOT_VERIFY';
-export type ScanTypeExtended = ScanType | 'URL_LIVE';
+export type ScanTypeExtended = ScanType | 'URL_LIVE' | 'EMAIL';
 
 export interface LiveScanResult {
   verdict: LiveScanVerdict;
@@ -73,4 +73,51 @@ export interface LiveJobResponse {
   status: 'queued' | 'running' | 'done' | 'failed';
   result?: LiveScanResult;
   error?: string;
+}
+
+export interface EmailSender {
+  from_display: string;
+  from_email:   string;
+  from_domain:  string;
+  reply_to:     string;
+  reply_to_domain: string;
+  display_name_mismatch: boolean;
+  reply_to_mismatch:     boolean;
+}
+
+export interface EmailAuthResults {
+  spf:  string;
+  dkim: string;
+  dmarc: string;
+}
+
+export interface EmailLink {
+  url:        string;
+  prediction: string;
+  confidence: number;
+}
+
+export interface EmailAttachment {
+  filename:  string;
+  extension: string;
+  risk:      string;
+}
+
+export interface EmailScanResult {
+  success:         boolean;
+  scan_type:       'EMAIL';
+  prediction:      string;
+  confidence:      number;
+  risk_score:      number;
+  risk_level:      RiskLevel;
+  sender:          EmailSender;
+  subject_snippet: string;
+  date:            string;
+  auth_results:    EmailAuthResults;
+  links:           EmailLink[];
+  attachments:     EmailAttachment[];
+  indicators:      string[];
+  evidence:        string[];
+  msg_id_hash:     string;
+  body_preview:    null;
 }

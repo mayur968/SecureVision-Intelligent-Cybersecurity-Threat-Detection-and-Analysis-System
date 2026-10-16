@@ -30,6 +30,13 @@ const Icon = {
       <circle cx="10" cy="10.5" r="1.25" fill="currentColor" stroke="none"/>
     </svg>
   ),
+  Email: () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="3" width="14" height="10" rx="1.5"/>
+      <path d="M1 3l7 5 7-5"/>
+      <path d="M1 8l4 2M15 8l-4 2"/>
+    </svg>
+  ),
   History: () => (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="8" cy="8" r="6.5"/>
@@ -49,6 +56,7 @@ const NAV_ITEMS = [
   { to: '/scan/url',     icon: Icon.Url,       label: 'URL Scanner'     },
   { to: '/scan/message', icon: Icon.Message,   label: 'Message Scanner' },
   { to: '/scan/apk',     icon: Icon.Apk,       label: 'APK Scanner'     },
+  { to: '/scan/email',   icon: Icon.Email,     label: 'Email Scanner'   },
   { to: '/history',      icon: Icon.History,   label: 'Scan History'    },
 ];
 

@@ -689,6 +689,47 @@ def api_get_live_job(job_id):
     return jsonify(response)
 
 
+@app.route('/api/scan/email/upload', methods=['POST'])
+def scan_email_upload():
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'No file provided'}), 400
+    f = request.files['file']
+    if not f.filename or not f.filename.lower().endswith('.eml'):
+        return jsonify({'success': False, 'error': 'Only .eml files are accepted'}), 400
+    data = f.read(5 * 1024 * 1024 + 1)
+    if len(data) > 5 * 1024 * 1024:
+        return jsonify({'success': False, 'error': 'File too large (max 5 MB)'}), 413
+    try:
+        from detection.email_scanner import scan_eml
+        result = scan_eml(data)
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f'Email scan error: {e}')
+        return jsonify({'success': False, 'error': 'Internal scan error'}), 500
+    try:
+        input_val = f"{result['sender']['from_domain']}:{result['subject_snippet']}"[:200]
+        scan = ScanHistory(
+            scan_type='EMAIL',
+            input_value=input_val,
+            prediction=result['prediction'],
+            confidence=result['confidence'],
+            risk_score=result['risk_score'],
+            risk_level=result['risk_level'],
+            explanation='; '.join(result['evidence'][:3]) if result['evidence'] else '',
+            recommendation='Review sender, do not click links.',
+            status='completed',
+            model_version=None,
+            anon_session_id=session.get('anon_id'),
+            user_id=session.get('user_id'),
+        )
+        db.session.add(scan)
+        db.session.commit()
+    except Exception as e:
+        logger.error(f'Failed to save email scan to history: {e}')
+    return jsonify(result), 200
+
+
 @app.route('/api/health', methods=['GET'])
 def api_health():
     """Health check endpoint."""
@@ -736,7 +777,9 @@ def api_get_statistics():
     """API endpoint to get statistics."""
     try:
         stats = ScanHistory.get_statistics()
-        
+        email_scans = ScanHistory.query.filter_by(scan_type='EMAIL').count()
+        stats['email_scans'] = email_scans
+
         return jsonify({
             'success': True,
             'statistics': stats
