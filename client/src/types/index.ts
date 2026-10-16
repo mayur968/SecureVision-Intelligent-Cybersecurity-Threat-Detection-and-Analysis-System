@@ -1,5 +1,5 @@
 export type RiskLevel  = 'LOW' | 'MEDIUM' | 'HIGH';
-export type Prediction = 'SAFE' | 'PHISHING' | 'MALICIOUS' | 'UNKNOWN' | 'ERROR';
+export type Prediction = 'SAFE' | 'PHISHING' | 'MALICIOUS' | 'UNKNOWN' | 'ERROR' | 'SUSPICIOUS';
 export type ScanType   = 'URL' | 'MESSAGE' | 'APK';
 
 export interface ScanResult {
@@ -107,7 +107,7 @@ export interface EmailAttachment {
 export interface EmailScanResult {
   success:         boolean;
   scan_type:       'EMAIL';
-  prediction:      string;
+  prediction:      Prediction;
   confidence:      number;
   risk_score:      number;
   risk_level:      RiskLevel;

@@ -691,11 +691,19 @@ def api_get_live_job(job_id):
 
 @app.route('/api/scan/email/upload', methods=['POST'])
 def scan_email_upload():
+    # Note: this endpoint is intentionally unauthenticated and has no per-IP rate limit,
+    # consistent with the other scan endpoints (/api/scan/apk, /api/scan/url).
     if 'file' not in request.files:
         return jsonify({'success': False, 'error': 'No file provided'}), 400
     f = request.files['file']
     if not f.filename or not f.filename.lower().endswith('.eml'):
         return jsonify({'success': False, 'error': 'Only .eml files are accepted'}), 400
+    # Reject oversized uploads before reading any bytes into memory.
+    # request.content_length is set by the client from the Content-Length header;
+    # we enforce it as an early gate so we don't allocate the full buffer first.
+    content_length = request.content_length
+    if content_length is not None and content_length > 5 * 1024 * 1024:
+        return jsonify({'success': False, 'error': 'File too large (max 5 MB)'}), 413
     data = f.read(5 * 1024 * 1024 + 1)
     if len(data) > 5 * 1024 * 1024:
         return jsonify({'success': False, 'error': 'File too large (max 5 MB)'}), 413
