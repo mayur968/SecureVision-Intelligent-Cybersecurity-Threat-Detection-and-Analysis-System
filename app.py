@@ -709,6 +709,10 @@ def scan_email_upload():
         return jsonify({'success': False, 'error': 'Internal scan error'}), 500
     try:
         input_val = f"{result['sender']['from_domain']}:{result['subject_snippet']}"[:200]
+        user_id = session.get('user_id')
+        if not user_id and 'anon_session_id' not in session:
+            session['anon_session_id'] = secrets.token_hex(32)
+        anon_id = session.get('anon_session_id') if not user_id else None
         scan = ScanHistory(
             scan_type='EMAIL',
             input_value=input_val,
@@ -720,8 +724,8 @@ def scan_email_upload():
             recommendation='Review sender, do not click links.',
             status='completed',
             model_version=None,
-            anon_session_id=session.get('anon_id'),
-            user_id=session.get('user_id'),
+            anon_session_id=anon_id,
+            user_id=user_id,
         )
         db.session.add(scan)
         db.session.commit()

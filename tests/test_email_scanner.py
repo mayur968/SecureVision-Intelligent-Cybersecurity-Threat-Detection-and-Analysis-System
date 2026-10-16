@@ -197,7 +197,7 @@ def test_body_not_in_response():
     )
 
 
-# ── Test 10: Flask endpoint ───────────────────────────────────────────────────
+# ── Tests 10-12: Flask endpoint ──────────────────────────────────────────────
 
 def test_email_upload_endpoint(flask_client):
     """POST to /api/scan/email/upload with a valid .eml returns 200 + success."""
@@ -212,3 +212,32 @@ def test_email_upload_endpoint(flask_client):
     result = resp.get_json()
     assert result['success'] is True
     assert result['prediction'] in {'SAFE', 'SUSPICIOUS', 'PHISHING'}
+
+
+def test_email_upload_rejects_non_eml(flask_client):
+    """POST with a non-.eml file returns 400 with a clear error message."""
+    data = {'file': (io.BytesIO(b'not an email'), 'malware.exe', 'application/octet-stream')}
+    resp = flask_client.post(
+        '/api/scan/email/upload',
+        data=data,
+        content_type='multipart/form-data',
+    )
+    assert resp.status_code == 400
+    result = resp.get_json()
+    assert result['success'] is False
+    assert 'eml' in result['error'].lower() or '.eml' in result['error']
+
+
+def test_email_upload_rejects_oversized_file(flask_client):
+    """POST with a file larger than 5 MB returns 413."""
+    # 5 MB + 1 byte triggers the size check
+    oversized = io.BytesIO(b'X' * (5 * 1024 * 1024 + 1))
+    data = {'file': (oversized, 'big.eml', 'message/rfc822')}
+    resp = flask_client.post(
+        '/api/scan/email/upload',
+        data=data,
+        content_type='multipart/form-data',
+    )
+    assert resp.status_code == 413
+    result = resp.get_json()
+    assert result['success'] is False

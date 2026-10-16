@@ -42,6 +42,7 @@ export interface Statistics {
   apk_scans:        number;
   url_scans:        number;
   message_scans:    number;
+  email_scans:      number;
   threats_detected: number;
   safe_results:     number;
   threat_breakdown: { apk: number; url: number; message: number };
