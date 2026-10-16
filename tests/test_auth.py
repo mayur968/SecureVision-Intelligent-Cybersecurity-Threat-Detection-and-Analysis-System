@@ -393,3 +393,39 @@ class TestMigration0003:
         assert 'users' in tables
         assert 'user_id' in sh_cols
         assert 'anon_session_id' in sh_cols
+
+
+class TestSafeRedirectUrl:
+    """Coverage for _safe_redirect_url — the open-redirect guard."""
+
+    def _call(self, url):
+        from database.auth import _safe_redirect_url
+        return _safe_redirect_url(url)
+
+    def test_valid_local_path_returned(self):
+        assert self._call('/dashboard') == '/dashboard'
+
+    def test_valid_nested_path_returned(self):
+        assert self._call('/scan/url') == '/scan/url'
+
+    def test_none_returns_dashboard(self):
+        assert self._call(None) == '/dashboard'
+
+    def test_empty_string_returns_dashboard(self):
+        assert self._call('') == '/dashboard'
+
+    def test_absolute_url_rejected(self):
+        """Full http:// URL must be rejected — open redirect."""
+        assert self._call('http://evil.com/steal') == '/dashboard'
+
+    def test_protocol_relative_rejected(self):
+        """//evil.com path must be rejected — open redirect."""
+        assert self._call('//evil.com/steal') == '/dashboard'
+
+    def test_url_with_scheme_rejected(self):
+        assert self._call('https://evil.com') == '/dashboard'
+
+    def test_url_with_netloc_rejected(self):
+        """A URL that parses with a netloc must be rejected."""
+        # urlparse('///') has empty netloc but this covers the netloc guard
+        assert self._call('http://localhost/admin') == '/dashboard'
