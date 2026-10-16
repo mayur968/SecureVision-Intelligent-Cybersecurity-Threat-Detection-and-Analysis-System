@@ -38,8 +38,9 @@ env/
 instance/
 .webassets-cache
 
-# Database
+# Database — never commit DB files or backups
 *.db
+*.db.*
 *.sqlite
 *.sqlite3
 securevision.db
@@ -47,6 +48,7 @@ securevision.db
 # Logs
 *.log
 securevision.log
+flask_startup.log
 
 # Models (trained ML models - can be large)
 models/*.pkl
@@ -75,4 +77,6 @@ Thumbs.db
 *.tmp
 *.temp
 *.bak
+*.bak2
+*backup*
 node_modules
