@@ -186,10 +186,23 @@ class TestModelRegistry:
             assert row.is_synthetic_data is True
 
     def test_algorithm_read_from_pkl(self, ctx):
+        """Algorithm is read from the saved .pkl file — do not hardcode the class name."""
         from database.models import ModelRegistry, db
+        import joblib, pathlib
         url_model = db.session.get(ModelRegistry, 'url_lr_v1.0')
         assert url_model is not None
-        assert url_model.algorithm == 'LogisticRegression'
+        # Read the real algorithm name from the pkl file and compare
+        pkl_path = pathlib.Path(__file__).parent.parent / 'models' / 'url_model.pkl'
+        if pkl_path.exists():
+            pipeline = joblib.load(pkl_path)
+            # Pipeline's last step name is the classifier class
+            real_algo = type(pipeline.steps[-1][1]).__name__ if hasattr(pipeline, 'steps') else type(pipeline).__name__
+            assert url_model.algorithm == real_algo, (
+                f"Registry says '{url_model.algorithm}' but pkl is '{real_algo}'"
+            )
+        else:
+            # pkl not present (CI without models) — just assert the field is non-empty
+            assert url_model.algorithm
 
     def test_to_dict(self, ctx):
         from database.models import ModelRegistry, db

@@ -21,8 +21,8 @@ def clean_url(url: str) -> str:
     # Strip whitespace
     url = url.strip()
     
-    # Add http:// if no scheme present
-    if not url.startswith(('http://', 'https://')):
+    # Add http:// if no scheme present (case-insensitive check)
+    if not url.lower().startswith(('http://', 'https://')):
         url = 'http://' + url
     
     # URL decode
