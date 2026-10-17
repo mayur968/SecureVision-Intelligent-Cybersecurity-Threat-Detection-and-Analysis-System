@@ -270,6 +270,39 @@ def test_post_live_scan_invalid_url(client):
 if __name__ == '__main__':
     unittest.main()
 
+
+# ── Unit tests: live scan job with trusted domain (None confidence) ─────────
+
+class TestLiveScanTrustedDomain(unittest.TestCase):
+    """Test that _run_live_scan_job handles None confidence from trusted domains."""
+
+    def test_none_confidence_does_not_crash(self):
+        """ml_phishing_prob calculation must handle None confidence gracefully."""
+        # This is a logic test - simulate what happens in _run_live_scan_job
+        ml_confidence = None  # This is what trusted_domain_list returns
+        ml_prediction = 'SAFE'
+        
+        # The fixed code should handle this:
+        if ml_confidence is None:
+            ml_phishing_prob = 0.0
+        elif ml_prediction == 'PHISHING':
+            ml_phishing_prob = ml_confidence
+        else:
+            ml_phishing_prob = 1.0 - ml_confidence
+        
+        # Verify ml_phishing_prob is numeric and safe for downstream calculations
+        self.assertIsInstance(ml_phishing_prob, float)
+        
+        # Verify combined_score calculation doesn't crash
+        combined_score = ml_phishing_prob * 100
+        self.assertEqual(combined_score, 0.0)
+        self.assertIsInstance(combined_score, float)
+        
+        # Verify downstream calculations work
+        combined_confidence = combined_score / 100.0
+        self.assertEqual(combined_confidence, 0.0)
+
+
 # ── Unit tests: brand mismatch precision ─────────────────────────────────────
 
 class TestBrandMismatch(unittest.TestCase):

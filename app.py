@@ -195,8 +195,14 @@ def _run_live_scan_job(job_id: str, url: str, user_id=None, anon_session_id=None
         # ML prediction
         ml_result = url_detector.predict(url)
         ml_prediction = ml_result.get('prediction', 'UNKNOWN')
-        ml_confidence = ml_result.get('confidence', 0.5)
-        ml_phishing_prob = ml_confidence if ml_prediction == 'PHISHING' else (1.0 - ml_confidence)
+        ml_confidence = ml_result.get('confidence', None)
+        # Guard against None confidence (e.g., from trusted_domain_list results)
+        if ml_confidence is None:
+            ml_phishing_prob = 0.0
+        elif ml_prediction == 'PHISHING':
+            ml_phishing_prob = ml_confidence
+        else:
+            ml_phishing_prob = 1.0 - ml_confidence
 
         live_verdict = live_result.get('verdict', 'COULD_NOT_VERIFY')
         live_score = live_result.get('live_score', 0)
@@ -291,6 +297,8 @@ def _run_live_scan_job(job_id: str, url: str, user_id=None, anon_session_id=None
             'risk_level': risk_result['risk_level'],
             'explanation': full_explanation,
             'recommendations': recommendations,
+            'source': ml_result.get('source', 'live_scanner'),
+            'source_label': ml_result.get('source_label', 'Live browser scan'),
         }
 
         with _job_store_lock:
